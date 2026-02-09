@@ -1,6 +1,6 @@
 import { initAudio } from "./modules/audioManager.js";
 import { initScene } from "./modules/sceneManager.js";
-import {} from "./modules/spotifyAPI.js";
+import {getISRCFromDeezer} from "./modules/metaDataManager.js";
 import {} from "./modules/uiManager.js";
 
 // Importation du canvas 3D
@@ -28,6 +28,17 @@ async function obtenirMusiqueCourante() {
     if (isPlaying) {
       const titre = track.name;
       const artiste = track.artist['#text'];
+
+      //////////////////////////////////////////////////////////////////////////
+      
+      const isrc = await getISRCFromDeezer(titre, artiste);
+
+      fetch(`https://api.reccobeats.com/v1/track?ids=${isrc}`)
+        .then((response) => response.text())
+        .then((result) => console.log(result))
+        .catch((error) => console.error(error));
+      
+      //////////////////////////////////////////////////////////////////////////
       
       // Retourner les informations du morceau
       console.log(`Musique en cours : ${titre} par ${artiste}`);
