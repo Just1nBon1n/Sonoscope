@@ -1,57 +1,26 @@
 import { initAudio } from "./modules/audioManager.js";
 import { initScene } from "./modules/sceneManager.js";
-import {getISRCFromDeezer} from "./modules/metaDataManager.js";
+import { obtenirMetadonneesMusique } from "./modules/metaDataManager.js";
 import {} from "./modules/uiManager.js";
 
 // Importation du canvas 3D
 const canvas3D = document.getElementById("cube3D");
 
-// Identifiant API Last.fm
-const LASTFM_API_KEY = "33b7ac1ee6fe2e3323c4a357cc426330";
-const LASTFM_USER = "B0N_Z";
 
-async function obtenirMusiqueCourante() {
-  // URL de l'API Last.fm pour récupérer les morceaux récents de l'utilisateur
-  const url = `https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${LASTFM_USER}&api_key=${LASTFM_API_KEY}&format=json&limit=1`;
 
-  try {
-    const reponse = await fetch(url);
-    const donnees = await reponse.json();
+// Vérification toutes les 10 secondes (Polling)
+setInterval(Polling, 10000);
 
-    // Récupérer le morceau le plus récent
-    const track = donnees.recenttracks.track[0];
-
-    // Vérifier si le morceau est en cours de lecture
-    // Note : Delais de 10-15 secondes de Spotify pour envoyer à Last.fm 
-    const isPlaying = track['@attr'] && track['@attr'].nowplaying === 'true';
-
-    if (isPlaying) {
-      const titre = track.name;
-      const artiste = track.artist['#text'];
-
-      //////////////////////////////////////////////////////////////////////////
-      
-      const isrc = await getISRCFromDeezer(titre, artiste);
-
-      fetch(`https://api.reccobeats.com/v1/track?ids=${isrc}`)
-        .then((response) => response.text())
-        .then((result) => console.log(result))
-        .catch((error) => console.error(error));
-      
-      //////////////////////////////////////////////////////////////////////////
-      
-      // Retourner les informations du morceau
-      console.log(`Musique en cours : ${titre} par ${artiste}`);
-      } else {
-        console.log("⏸️ Aucune musique détectée en direct sur Last.fm.");
-      }
-  } catch (erreur) {
-    console.error("Erreur de connexion à Last.fm :", erreur);
+async function Polling() {
+  const musicData = await obtenirMetadonneesMusique();
+  if (musicData) {
+    console.log(`Musique détectée : "${musicData.titre}" --- ${musicData.artiste}`);
+    console.log(`ISRC trouvé pour "${musicData.titre}" de ${musicData.artiste} : ${musicData.isrc}`);
+    console.log("Détails complets de ReccoBeats (content) :", musicData.reccobeats.content);
   }
 }
 
-// Vérification toutes les 10 secondes (Polling)
-setInterval(obtenirMusiqueCourante, 10000);
+
 
 // Initialisation de l'audio au clic (obligation de l'utilisateur pour démarrer l'audio)
 let audioElements = null;
