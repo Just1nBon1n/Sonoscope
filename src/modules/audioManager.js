@@ -13,7 +13,7 @@ export async function initAudio() {
 
     // 3. Créer l'analyseur (le traducteur)
     const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 256; // Divise le son en bandes de fréquences (oblige detre une puissance de 2)
+    analyser.fftSize = 2048; // Divise le son en bandes de fréquences (oblige detre une puissance de 2)
 
     // Connecter la source à l'analyseur
     source.connect(analyser);

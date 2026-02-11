@@ -1,48 +1,76 @@
 // Importation de la bibliothèque Three.js
 import * as THREE from "three";
 
+// Fonction d'initialisation de la scène 3D
 export function initScene(canvas3D) {
-  // Création de la scène 3D
+  // Création de la scène
   const scene = new THREE.Scene();
-  // Initialisation de la camera
+
+  // Création de la caméra
   const camera = new THREE.PerspectiveCamera(
     75,
     window.innerWidth / window.innerHeight,
     0.1,
-    1000,
+    1000
   );
-  // Recule la caméra pour ne pas être dans le cube
-  camera.position.z = 5;
+  camera.position.set(0, 10, 15);
+  camera.lookAt(0, 0, 0);
 
-  // Création du renderer
+  // Création du rendu
   const renderer = new THREE.WebGLRenderer({
     canvas: canvas3D,
-    antialias: true, // Lissage des bords (anti-aliasing)
-  });
-  // On donne au moteur la taille de la fenêtre
+    antialias: true,
+  })
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);   // Important pour la netteté
 
-  // Création du cube 3D
-  const faceGeometry = new THREE.BoxGeometry(1, 1, 1);
-  // Création du matériau du cube
-  const faceMaterial = new THREE.MeshBasicMaterial({ color: 0x004400 });
-  // Création du mesh (géométrie + matériau)
-  const cube = new THREE.Mesh(faceGeometry, faceMaterial);
 
-  // Géométrie juste pour les edges
-  const edgesGeometry = new THREE.EdgesGeometry(faceGeometry);
-  const edgesMaterial = new THREE.LineBasicMaterial({
-    color: 0x00ff00,
-    linewidth: 2,
-  });
-  const wireframe = new THREE.LineSegments(edgesGeometry, edgesMaterial);
+  // AJOUT LUMIERE DE BASE
+  const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+  const point = new THREE.PointLight(0xffffff, 500);
+  point.position.set(10, 10, 10);
+  scene.add(ambient, point);
+  
+  return { scene, camera, renderer };
+}
 
-  // Ajout des bordures au cube (enfant du cube)
-  cube.add(wireframe);
+// Forme du socle centrale
+export function creerSocle(scene) {
+  const geometry = new THREE.CylinderGeometry(10, 11, 0.5, 32);
+  const material = new THREE.MeshStandardMaterial({ color: 0x444444 });
+  const socle = new THREE.Mesh(geometry, material);
+  socle.position.y = -0.5;
+  scene.add(socle);
+  return socle;
+}
 
-  // Ajout du cube à la scène
-  scene.add(cube);
+// Fonction pour générer formes de base (Pyramide, Sphère, etc.)
+export function creerFormesMusicales(scene) {
+  const groupe = new THREE.Group();
+  
+  // 1. Le Cube
+  const cube = new THREE.Mesh(
+    new THREE.BoxGeometry(1.5, 1.5, 1.5),
+    new THREE.MeshStandardMaterial({ color: 0x00ff88 })
+  );
+  cube.position.set(0, 1, 0); // Au centre
+  
+  // 2. La Pyramide (Cone)
+  const pyramide = new THREE.Mesh(
+    new THREE.ConeGeometry(1, 2, 4),
+    new THREE.MeshStandardMaterial({ color: 0xff0055 })
+  );
+  pyramide.position.set(-6, 1, -6);
 
-  // Exportation des éléments de la scène
-  return { scene, camera, renderer, cube };
+  // 3. La Sphère
+  const sphere = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 32, 32),
+    new THREE.MeshStandardMaterial({ color: 0x00ccff })
+  );
+  sphere.position.set(6, 1, 6);
+
+  groupe.add(cube, pyramide, sphere);
+  scene.add(groupe);
+  
+  return { groupe, cube, pyramide, sphere };
 }

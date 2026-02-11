@@ -1,12 +1,11 @@
 import { initAudio } from "./modules/audioManager.js";
-import { initScene } from "./modules/sceneManager.js";
+import { initScene, creerSocle, creerFormesMusicales } from "./modules/sceneManager.js";
 import { obtenirMetadonneesMusique } from "./modules/metaDataManager.js";
+import { initGUI } from "./modules/guiManager.js";
 import {} from "./modules/uiManager.js";
 
 // Importation du canvas 3D
-const canvas3D = document.getElementById("cube3D");
-
-
+const canvas3D = document.getElementById("scene3D");
 
 // Vérification toutes les 10 secondes (Polling)
 setInterval(Polling, 10000);
@@ -19,8 +18,6 @@ async function Polling() {
     console.log("Détails complets de ReccoBeats (content) :", musicData.reccobeats.content);
   }
 }
-
-
 
 // Initialisation de l'audio au clic (obligation de l'utilisateur pour démarrer l'audio)
 let audioElements = null;
@@ -55,7 +52,17 @@ const getAverage = (array, start, end) => {
 };
 
 // Récupération des éléments de la scène 3D ("Déstructuration")
-const { scene, camera, renderer, cube } = initScene(canvas3D);
+const { scene, camera, renderer } = initScene(canvas3D);
+const socle = creerSocle(scene);
+const { groupe, cube, pyramide, sphere } = creerFormesMusicales(scene);
+
+initGUI(socle, { cube, pyramide, sphere });
+
+
+let angleCamera = 0; 
+const distanceCamera = 17; // La distance entre la caméra et le centre
+const vitesseRotation = 0.005; // Ajuste selon tes goûts
+
 
 // Animation de la scène
 function animate() {
@@ -65,24 +72,30 @@ function animate() {
     audioElements.analyser.getByteFrequencyData(audioElements.dataArray);
 
     // On récupère des moyennes de zones précises
-    const bass = getAverage(audioElements.dataArray, 0, 10); // Les 10 premières cases
-    const mids = getAverage(audioElements.dataArray, 15, 40); // Le milieu
-    const highs = getAverage(audioElements.dataArray, 60, 100); // Les hautes fréquences
+    const bass = getAverage(audioElements.dataArray, 0, 15); // Les 10 premières cases
+    const mids = getAverage(audioElements.dataArray, 20, 150); // Le milieu
+    const highs = getAverage(audioElements.dataArray, 160, 500); // Les hautes fréquences
 
     // On mappe les valeurs pour les adapter à la scène
     const bassMapped = mapRange(bass, 0, 255, 1, 5);
-    const midsMapped = mapRange(mids, 0, 255, 1, 5);
-    const highsMapped = mapRange(highs, 0, 255, 1, 5);
+    const midsMapped = mapRange(mids, 0, 200, 1, 5);
+    const highsMapped = mapRange(highs, 0, 100, 1, 5);
 
-    // On applique les valeurs mappées à l'échelle du cube
-    cube.scale.x = bassMapped;
-    cube.scale.y = midsMapped;
-    cube.scale.z = highsMapped;
+    sphere.scale.setScalar(bassMapped);
+    sphere.position.y = (1.5 * bassMapped) / 2; 
+    cube.scale.setScalar(midsMapped);
+    cube.position.y = (1.5 * midsMapped) / 2;
+    pyramide.scale.setScalar(highsMapped);
+    pyramide.position.y = (2 * highsMapped) / 2;
+
+    // Mouvement de la caméra
+    angleCamera += vitesseRotation;
+    camera.position.x = Math.cos(angleCamera) * distanceCamera;
+    camera.position.z = Math.sin(angleCamera) * distanceCamera;
+    camera.position.y = 10; 
+    camera.lookAt(0, 0, 0);
   }
 
-  // Rotation du cube
-  cube.rotation.x += 0.01;
-  cube.rotation.y += 0.01;
   // Rendu de la scène
   renderer.render(scene, camera);
 }
