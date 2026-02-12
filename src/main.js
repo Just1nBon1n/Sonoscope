@@ -1,8 +1,18 @@
 import { initAudio } from "./modules/audioManager.js";
-import { initScene, creerSocle, creerFormesMusicales } from "./modules/sceneManager.js";
+import { initScene, initObjets } from "./modules/sceneManager.js";
 import { obtenirMetadonneesMusique } from "./modules/metaDataManager.js";
 import { initGUI } from "./modules/guiManager.js";
 import {} from "./modules/uiManager.js";
+
+window.addEventListener("resize", () => {
+  // Mettre à jour la caméra
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  // Mettre à jour le rendu
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+});
 
 // Importation du canvas 3D
 const canvas3D = document.getElementById("scene3D");
@@ -53,15 +63,14 @@ const getAverage = (array, start, end) => {
 
 // Récupération des éléments de la scène 3D ("Déstructuration")
 const { scene, camera, renderer } = initScene(canvas3D);
-const socle = creerSocle(scene);
-const { groupe, cube, pyramide, sphere } = creerFormesMusicales(scene);
+const { cube, pyramide, sphere, socle } = initObjets(scene);
 
-initGUI(socle, { cube, pyramide, sphere });
-
+// Initialisation de l'interface de contrôle
+initGUI({ cube, pyramide, sphere, socle });
 
 let angleCamera = 0; 
-const distanceCamera = 17; // La distance entre la caméra et le centre
-const vitesseRotation = 0.005; // Ajuste selon tes goûts
+const distanceCamera = 20; // La distance entre la caméra et le centre
+const vitesseRotation = 0.005; 
 
 
 // Animation de la scène
@@ -92,7 +101,7 @@ function animate() {
     angleCamera += vitesseRotation;
     camera.position.x = Math.cos(angleCamera) * distanceCamera;
     camera.position.z = Math.sin(angleCamera) * distanceCamera;
-    camera.position.y = 10; 
+    camera.position.y = 7; 
     camera.lookAt(0, 0, 0);
   }
 

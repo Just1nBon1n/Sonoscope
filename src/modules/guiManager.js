@@ -1,10 +1,9 @@
 // Importation de la bibliothèque lil-gui pour les contrôles de l'interface
 import GUI from "lil-gui";
 
-export function initGUI(socle, formes) {
+export function initGUI(formes) {
     const gui = new GUI();
 
-    
     // Fonction pour ajouter Position, Rotation et Scale d'un coup
     const addTransform = (folder, object) => {
         const pos = folder.addFolder('Position');
@@ -25,11 +24,15 @@ export function initGUI(socle, formes) {
         sca.add(object.scale, 'z', 0.1, 5);
         sca.close();
 
+        folder.addColor(object.material, 'color').name('Couleur');
+
+        folder.add(object.material, 'wireframe').name('Wireframe');
+
         folder.close();
     };
 
     // Ajout des contrôles pour le socle et les formes
-    addTransform(gui.addFolder('Socle'), socle);
+    addTransform(gui.addFolder('Socle'), formes.socle);
     addTransform(gui.addFolder('Cube'), formes.cube);
     addTransform(gui.addFolder('Pyramide'), formes.pyramide);
     addTransform(gui.addFolder('Sphère'), formes.sphere);

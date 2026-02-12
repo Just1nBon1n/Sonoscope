@@ -13,8 +13,6 @@ export function initScene(canvas3D) {
     0.1,
     1000
   );
-  camera.position.set(0, 10, 15);
-  camera.lookAt(0, 0, 0);
 
   // Création du rendu
   const renderer = new THREE.WebGLRenderer({
@@ -22,7 +20,7 @@ export function initScene(canvas3D) {
     antialias: true,
   })
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(window.devicePixelRatio);   // Important pour la netteté
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));   // Important pour la netteté
 
 
   // AJOUT LUMIERE DE BASE
@@ -34,19 +32,15 @@ export function initScene(canvas3D) {
   return { scene, camera, renderer };
 }
 
-// Forme du socle centrale
-export function creerSocle(scene) {
-  const geometry = new THREE.CylinderGeometry(10, 11, 0.5, 32);
+// Fonction pour générer formes de base (Pyramide, Sphère, etc.)
+export function initObjets(scene) {
+  const groupe = new THREE.Group();
+
+  const geometry = new THREE.CylinderGeometry(11, 11, 2, 20);
   const material = new THREE.MeshStandardMaterial({ color: 0x444444 });
   const socle = new THREE.Mesh(geometry, material);
   socle.position.y = -0.5;
-  scene.add(socle);
-  return socle;
-}
-
-// Fonction pour générer formes de base (Pyramide, Sphère, etc.)
-export function creerFormesMusicales(scene) {
-  const groupe = new THREE.Group();
+  groupe.add(socle);
   
   // 1. Le Cube
   const cube = new THREE.Mesh(
@@ -72,5 +66,5 @@ export function creerFormesMusicales(scene) {
   groupe.add(cube, pyramide, sphere);
   scene.add(groupe);
   
-  return { groupe, cube, pyramide, sphere };
+  return { groupe, cube, pyramide, sphere, socle };
 }
