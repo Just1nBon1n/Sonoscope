@@ -63,13 +63,13 @@ const getAverage = (array, start, end) => {
 
 // Récupération des éléments de la scène 3D ("Déstructuration")
 const { scene, camera, renderer } = initScene(canvas3D);
-const { cube, pyramide, sphere, socle } = initObjets(scene);
+const monde = initObjets(scene);
 
 // Initialisation de l'interface de contrôle
-initGUI({ cube, pyramide, sphere, socle });
+initGUI(camera, monde);
 
 let angleCamera = 0; 
-const distanceCamera = 20; // La distance entre la caméra et le centre
+const distanceCamera = 25; // La distance entre la caméra et le centre
 const vitesseRotation = 0.005; 
 
 
@@ -90,18 +90,11 @@ function animate() {
     const midsMapped = mapRange(mids, 0, 200, 1, 5);
     const highsMapped = mapRange(highs, 0, 100, 1, 5);
 
-    sphere.scale.setScalar(bassMapped);
-    sphere.position.y = (1.5 * bassMapped) / 2; 
-    cube.scale.setScalar(midsMapped);
-    cube.position.y = (1.5 * midsMapped) / 2;
-    pyramide.scale.setScalar(highsMapped);
-    pyramide.position.y = (2 * highsMapped) / 2;
-
     // Mouvement de la caméra
     angleCamera += vitesseRotation;
     camera.position.x = Math.cos(angleCamera) * distanceCamera;
     camera.position.z = Math.sin(angleCamera) * distanceCamera;
-    camera.position.y = 7; 
+    camera.position.y = 0; 
     camera.lookAt(0, 0, 0);
   }
 

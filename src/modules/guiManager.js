@@ -1,10 +1,22 @@
 // Importation de la bibliothèque lil-gui pour les contrôles de l'interface
 import GUI from "lil-gui";
 
-export function initGUI(formes) {
+export function initGUI(camera, monde) {
     const gui = new GUI();
 
-    // Fonction pour ajouter Position, Rotation et Scale d'un coup
+    // --- CAMÉRA ---
+    if (camera) {
+        const camFolder = gui.addFolder('Caméra');
+        
+        // FOV (Field of View)
+        camFolder.add(camera, 'fov', 10, 150).step(1).name('Zoom (FOV)').onChange(() => {
+            camera.updateProjectionMatrix(); // OBLIGATOIRE pour voir le changement
+        });
+
+        camFolder.close();
+    }
+
+    // --- FONCITON DE TRANSFORMATION ---
     const addTransform = (folder, object) => {
         const pos = folder.addFolder('Position');
         pos.add(object.position, 'x', -10, 10);
@@ -31,11 +43,17 @@ export function initGUI(formes) {
         folder.close();
     };
 
-    // Ajout des contrôles pour le socle et les formes
-    addTransform(gui.addFolder('Socle'), formes.socle);
-    addTransform(gui.addFolder('Cube'), formes.cube);
-    addTransform(gui.addFolder('Pyramide'), formes.pyramide);
-    addTransform(gui.addFolder('Sphère'), formes.sphere);
+    // --- SOCLE BAS ---
+    const socleBasFolder = gui.addFolder('Socle Bas');
+    for (let i = 0; i < monde.socleBas.children.length; i++) {
+        addTransform(socleBasFolder.addFolder(`Socle Bas ${i + 1}`), monde.socleBas.children[i]);
+    }
+
+    // --- SOCLE HAUT ---
+    const socleHautFolder = gui.addFolder('Socle Haut');
+    for (let i = 0; i < monde.socleHaut.children.length; i++) {
+        addTransform(socleHautFolder.addFolder(`Socle Haut ${i + 1}`), monde.socleHaut.children[i]);
+    }
 
     gui.close();
 
