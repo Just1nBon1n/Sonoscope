@@ -1,60 +1,57 @@
-// Importation de la bibliothèque lil-gui pour les contrôles de l'interface
 import GUI from "lil-gui";
 
 export function initGUI(camera, monde) {
     const gui = new GUI();
 
-    // --- CAMÉRA ---
+    // 1. --- CAMÉRA ---
     if (camera) {
         const camFolder = gui.addFolder('Caméra');
-        
-        // FOV (Field of View)
-        camFolder.add(camera, 'fov', 10, 150).step(1).name('Zoom (FOV)').onChange(() => {
-            camera.updateProjectionMatrix(); // OBLIGATOIRE pour voir le changement
-        });
-
+        // Contrôle de la FOV
+        camFolder.add(camera, 'fov', 10, 150).step(1).name('Zoom (FOV)').onChange(() => camera.updateProjectionMatrix());
         camFolder.close();
     }
 
-    // --- FONCITON DE TRANSFORMATION ---
-    const addTransform = (folder, object) => {
-        const pos = folder.addFolder('Position');
-        pos.add(object.position, 'x', -10, 10);
-        pos.add(object.position, 'y', -10, 10);
-        pos.add(object.position, 'z', -10, 10);
-        pos.close();
 
-        const rot = folder.addFolder('Rotation');
-        rot.add(object.rotation, 'x', 0, Math.PI * 2);
-        rot.add(object.rotation, 'y', 0, Math.PI * 2);
-        rot.add(object.rotation, 'z', 0, Math.PI * 2);
-        rot.close();
+    // 2. --- SOCLES (Haut et Bas) ---
+    const soclesFolder = gui.addFolder('Socles');
+    
+    soclesFolder.close();
 
-        const sca = folder.addFolder('Scale');
-        sca.add(object.scale, 'x', 0.1, 5);
-        sca.add(object.scale, 'y', 0.1, 5);
-        sca.add(object.scale, 'z', 0.1, 5);
-        sca.close();
 
-        folder.addColor(object.material, 'color').name('Couleur');
-
-        folder.add(object.material, 'wireframe').name('Wireframe');
-
-        folder.close();
+    // 3. --- MUR EQ (Le système de colonnes) ---
+    const murEQFolder = gui.addFolder('Mur EQ');
+    const eqControls = {
+        color: 0x404040,
+        rayon: 14
     };
 
-    // --- SOCLE BAS ---
-    const socleBasFolder = gui.addFolder('Socle Bas');
-    for (let i = 0; i < monde.socleBas.children.length; i++) {
-        addTransform(socleBasFolder.addFolder(`Socle Bas ${i + 1}`), monde.socleBas.children[i]);
-    }
+    // Contrôle de la couleur des briques du mur EQ
+    murEQFolder.addColor(eqControls, 'color').name('Couleur Briques').onChange((val) => {
+        monde.colonnesEQ.flat().forEach(cube => cube.material.color.set(val));
+    });
 
-    // --- SOCLE HAUT ---
-    const socleHautFolder = gui.addFolder('Socle Haut');
-    for (let i = 0; i < monde.socleHaut.children.length; i++) {
-        addTransform(socleHautFolder.addFolder(`Socle Haut ${i + 1}`), monde.socleHaut.children[i]);
-    }
+    // Contrôle du rayon du mur EQ 
+    murEQFolder.add(eqControls, 'rayon', 5, 35).name('Rayon du Mur').onChange((val) => {
+        monde.colonnesEQ.forEach((colonne, i) => {
+            const angle = (i / monde.colonnesEQ.length) * Math.PI * 2;
+            const x = Math.cos(angle) * val;
+            const z = Math.sin(angle) * val;
+            colonne.forEach(cube => {
+                cube.position.x = x;
+                cube.position.z = z;
+            });
+        });
+    });
+    
+    murEQFolder.close();
 
+
+    // 4. --- FLUX CENTRAL ---
+    const fluxFolder = gui.addFolder('Flux Central');
+
+    fluxFolder.close();
+
+    // On ferme la GUI au départ pour ne pas encombrer l'écran
     gui.close();
 
     return gui;

@@ -19,7 +19,6 @@ const canvas3D = document.getElementById("scene3D");
 
 // Vérification toutes les 10 secondes (Polling)
 setInterval(Polling, 10000);
-
 async function Polling() {
   const musicData = await obtenirMetadonneesMusique();
   if (musicData) {
@@ -70,7 +69,7 @@ initGUI(camera, monde);
 
 let angleCamera = 0; 
 const distanceCamera = 25; // La distance entre la caméra et le centre
-const vitesseRotation = 0.005; 
+const vitesseRotation = 0.002; 
 
 
 // Animation de la scène

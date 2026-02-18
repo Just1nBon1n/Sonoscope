@@ -43,6 +43,7 @@ function rand(min, max) {
 
 // --- Fonction pour générer le contenu de la scène ----------------------------
 export function initObjets(scene) {
+  // Création d'un objet "monde" pour organiser les éléments de la scène
   const monde = {
     socleBas: new THREE.Group(),
     socleHaut: new THREE.Group(),
@@ -51,6 +52,7 @@ export function initObjets(scene) {
     cubesFlux: []
   }
   scene.add(monde.socleBas, monde.socleHaut, monde.murEQ, monde.fluxCentral);
+
 
   // Création du socle Bas
   for (let i = 0; i < 3; i++) {
@@ -63,6 +65,7 @@ export function initObjets(scene) {
     monde.socleBas.add(etageBas);
   }
 
+
   // Création du socle Haut
   for (let i = 0; i < 3; i++) {
     const rayonInterieur = 12.3 - (i * 2);
@@ -73,6 +76,51 @@ export function initObjets(scene) {
     etageHaut.position.y = 9 - (i * .7);
     monde.socleHaut.add(etageHaut);
   }
+
+
+  // --- Création du mur EQ ---
+  const configMurEQ = {
+    nbColonnes: 64,
+    cubesParColonne: 12,
+    rayon: 30,
+    tailleCube: 2,
+    espacement: 1
+  };
+
+  // Tableau pour stocker les références des cubes du mur EQ
+  monde.colonnesEQ = []; 
+
+  // Géo identique mais mat différent pour chaque cube du mur EQ
+  const geoCubeEQ = new THREE.BoxGeometry(configMurEQ.tailleCube, configMurEQ.tailleCube, configMurEQ.tailleCube);
+
+  // Création des colonnes du mur EQ
+  for (let i = 0; i < configMurEQ.nbColonnes; i++) {
+    const colonne = [];
+
+    // Calcul de la position angulaire de chaque colonne (pour faire un cercle)
+    const angle = (i / configMurEQ.nbColonnes) * Math.PI * 2;
+    const x = Math.cos(angle) * configMurEQ.rayon;
+    const z = Math.sin(angle) * configMurEQ.rayon;
+
+    // Création des cubes pour chaque colonne
+    for (let j = 0; j < configMurEQ.cubesParColonne; j++) {
+      const matIndividuel = new THREE.MeshStandardMaterial({ 
+        color: 0x404040, 
+      });
+
+      const cube = new THREE.Mesh(geoCubeEQ, matIndividuel);
+      // Calcul de la position verticale du cube dans la colonne
+      const yPos = (j * (configMurEQ.tailleCube + configMurEQ.espacement)) - ((configMurEQ.cubesParColonne * (configMurEQ.tailleCube + configMurEQ.espacement)) / 2);
+      cube.position.set(x, yPos, z);
+      cube.lookAt(0, yPos, 0);
+
+      // Ajout du cube à la scène et à la colonne
+      monde.murEQ.add(cube);
+      colonne.push(cube);
+    }
+    monde.colonnesEQ.push(colonne);
+  }
+
 
   // Création du flux central
   const nbObjet = 100;
@@ -85,10 +133,13 @@ export function initObjets(scene) {
 
     const cube = new THREE.Mesh(geoFlux, matFlux);
 
+    // Position random
     cube.position.set(rand(-4, 4), rand(-5, 5), rand(-4, 4));
 
+    // Rotation random
     cube.rotation.set(rand(Math.PI), rand(Math.PI), 0);
 
+    // Scale random
     const s = rand(0.2, 1.5);
     cube.scale.set(s, s, s);
 
