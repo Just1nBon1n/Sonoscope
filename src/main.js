@@ -2,8 +2,9 @@ import { initAudio } from "./modules/audioManager.js";
 import { initScene, initObjets } from "./modules/sceneManager.js";
 import { obtenirMetadonneesMusique } from "./modules/metaDataManager.js";
 import { initGUI } from "./modules/guiManager.js";
-import {} from "./modules/uiManager.js";
+import { drawDebug, drawDebug2} from "./modules/uiManager.js";
 
+// --- Gestion resize de la fenêtre --------------------------------------------
 window.addEventListener("resize", () => {
   // Mettre à jour la caméra
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -13,7 +14,9 @@ window.addEventListener("resize", () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 });
+// -----------------------------------------------------------------------------
 
+// -----------------------------------------------------------------------------
 // Importation du canvas 3D
 const canvas3D = document.getElementById("scene3D");
 
@@ -76,6 +79,13 @@ const vitesseRotation = 0.002;
 function animate() {
   // Si l'audio est activé
   if (audioElements) {
+
+    // EQ en haut pour voir les fréquences brutes
+    drawDebug(audioElements.analyser, audioElements.dataArray);
+
+    // EQ en bas pour le regroupement en 64 colonnes logarithmiques
+    drawDebug2(audioElements.analyser, audioElements.dataArray);
+
     // Remplir le tableau avec les sons actuels
     audioElements.analyser.getByteFrequencyData(audioElements.dataArray);
 

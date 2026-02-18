@@ -54,6 +54,7 @@ export function initObjets(scene) {
   scene.add(monde.socleBas, monde.socleHaut, monde.murEQ, monde.fluxCentral);
 
 
+  // --- SOCLES (Haut et Bas et Bases) ---
   // Création du socle Bas
   for (let i = 0; i < 3; i++) {
     const rayonInterieur = 13 - (i * 2);
@@ -61,6 +62,7 @@ export function initObjets(scene) {
     const geoSocleBas = new THREE.CylinderGeometry(rayonExterieur, rayonInterieur, .7, 32);
     const matSocleBas = new THREE.MeshStandardMaterial({ color: 0x555555 });
     const etageBas = new THREE.Mesh(geoSocleBas, matSocleBas);
+    // Pars a -9 et monte de 0.7
     etageBas.position.y = -9 + (i * .7);
     monde.socleBas.add(etageBas);
   }
@@ -73,15 +75,26 @@ export function initObjets(scene) {
     const geoSocleHaut = new THREE.CylinderGeometry(rayonExterieur, rayonInterieur, .7, 32);
     const matSocleHaut = new THREE.MeshStandardMaterial({ color: 0x555555 });
     const etageHaut = new THREE.Mesh(geoSocleHaut, matSocleHaut);
+    // Pars a 9 et descend de 0.7
     etageHaut.position.y = 9 - (i * .7);
     monde.socleHaut.add(etageHaut);
   }
 
+  // Création de la base des socles 
+  const geoBaseSocle = new THREE.CylinderGeometry(14, 14, 2, 64);
+  const matBaseSocle = new THREE.MeshStandardMaterial({ color: 0x237346 });
+  const baseSocleBas = new THREE.Mesh(geoBaseSocle, matBaseSocle);
+  baseSocleBas.position.y = -10;
+  const baseSocleHaut = new THREE.Mesh(geoBaseSocle, matBaseSocle);
+  baseSocleHaut.position.y = 10;
+  monde.socleBas.add(baseSocleBas);
+  monde.socleHaut.add(baseSocleHaut);
 
-  // --- Création du mur EQ ---
+
+  // --- MUR EQ ---
   const configMurEQ = {
     nbColonnes: 64,
-    cubesParColonne: 12,
+    cubesParColonne: 14,
     rayon: 30,
     tailleCube: 2,
     espacement: 1
@@ -110,7 +123,10 @@ export function initObjets(scene) {
 
       const cube = new THREE.Mesh(geoCubeEQ, matIndividuel);
       // Calcul de la position verticale du cube dans la colonne
-      const yPos = (j * (configMurEQ.tailleCube + configMurEQ.espacement)) - ((configMurEQ.cubesParColonne * (configMurEQ.tailleCube + configMurEQ.espacement)) / 2);
+      // 1. Calcul de la hauteur totale de la colonne (cubes + espacement)
+      const hauteurTotaleColonne = configMurEQ.cubesParColonne * configMurEQ.tailleCube + (configMurEQ.cubesParColonne - 1) * configMurEQ.espacement;
+      // 2. Positionnement du cube en fonction de son index dans la colonne
+      const yPos = (j * (configMurEQ.tailleCube + configMurEQ.espacement)) - (hauteurTotaleColonne / 2) + (configMurEQ.tailleCube / 2);
       cube.position.set(x, yPos, z);
       cube.lookAt(0, yPos, 0);
 
@@ -122,7 +138,7 @@ export function initObjets(scene) {
   }
 
 
-  // Création du flux central
+  // --- FLUX CENTRAL ---
   const nbObjet = 100;
   const geoFlux = new THREE.BoxGeometry(1, 1, 1);
 
