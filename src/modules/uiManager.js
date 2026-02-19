@@ -52,53 +52,40 @@ export function drawDebug(analyser, dataArray) {
 const debugCanvas2 = document.getElementById("audioDebug2");
 const debugCtx2 = debugCanvas2.getContext("2d");
 
-
-export function drawDebug2(analyser, dataArray) {
-    if (!debugCtx2) return;
+export function drawDebug2(moyennesLog) {
+    if (!debugCtx2 || !moyennesLog) return;
 
     debugCtx2.clearRect(0, 0, debugCanvas2.width, debugCanvas2.height);
-    analyser.getByteFrequencyData(dataArray);
+    const nbBins = moyennesLog.length;
+    const barWidth = debugCanvas2.width / nbBins;
 
-    const numColonnes = 64;
-    const barWidth = debugCanvas2.width / numColonnes;
-    
-    // Paramètres Log
-    const minHz = 20;
-    const maxHz = 16000; // On s'arrête à 16k car après c'est souvent vide
-    const sampleRate = analyser.context.sampleRate;
-    const binSize = sampleRate / analyser.fftSize;
+    for (let i = 0; i < nbBins; i++) {
+        const value = moyennesLog[i];
+        const barHeight = value * (debugCanvas2.height - 20);
 
-    for (let i = 0; i < numColonnes; i++) {
-        // 1. Trouver la plage de fréquences pour cette colonne (Log)
-        const fLow = minHz * Math.pow(maxHz / minHz, i / numColonnes);
-        const fHigh = minHz * Math.pow(maxHz / minHz, (i + 1) / numColonnes);
+        // --- CALIBRAGE DES COULEURS ---
+        // On ajuste les ratios pour coller au découpage du canvas du haut
+        // Basses (Rouge) : ~12% | Médiums (Vert) : ~53% | Aigus (Bleu) : le reste
+        let color;
+        const ratio = i / nbBins;
 
-        // 2. Convertir ces fréquences en index du dataArray
-        const indexDebut = Math.floor(fLow / binSize);
-        const indexFin = Math.ceil(fHigh / binSize);
-
-        // 3. Calculer la moyenne sur cette plage
-        let somme = 0;
-        let compte = 0;
-        for (let j = indexDebut; j <= indexFin; j++) {
-            somme += dataArray[j];
-            compte++;
+        if (ratio < 0.12) {
+            color = "#ff4444"; 
+        } else if (ratio < 0.65) {
+            color = "#44ff44"; 
+        } else {
+            color = "#4444ff"; 
         }
-        const moyenne = somme / (compte || 1);
 
-        // 4. Dessiner la barre
-        const barHeight = (moyenne / 255) * (debugCanvas2.height - 20);
-        
-        // Couleur verte 
-        debugCtx2.fillStyle = "#44ff44";
+        if (value <= 0) {
+            debugCtx2.fillStyle = "#333";
+            debugCtx2.fillRect(i * barWidth, debugCanvas2.height - 21, barWidth - 1, 1);
+            continue;
+        }
+
+        debugCtx2.fillStyle = color;
         debugCtx2.fillRect(i * barWidth, debugCanvas2.height - 20 - barHeight, barWidth - 1, barHeight);
     }
-
-    // On garde les labels pour se repérer
-    debugCtx2.fillStyle = "white";
-    debugCtx2.font = "10px Arial";
-    [60, 500, 2000, 7000, 16000].forEach(hz => {
-        const x = debugCanvas2.width * (Math.log(hz / minHz) / Math.log(maxHz / minHz));
-        debugCtx2.fillText(hz >= 1000 ? (hz/1000)+"k" : hz, x, debugCanvas2.height - 5);
-    });
 }
+
+

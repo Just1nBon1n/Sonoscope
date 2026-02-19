@@ -1,8 +1,9 @@
-import { initAudio } from "./modules/audioManager.js";
+import { initAudio, obtenirDonneesLog } from "./modules/audioManager.js";
 import { initScene, initObjets } from "./modules/sceneManager.js";
 import { obtenirMetadonneesMusique } from "./modules/metaDataManager.js";
 import { initGUI } from "./modules/guiManager.js";
 import { drawDebug, drawDebug2} from "./modules/uiManager.js";
+
 
 // --- Gestion resize de la fenêtre --------------------------------------------
 window.addEventListener("resize", () => {
@@ -16,11 +17,10 @@ window.addEventListener("resize", () => {
 });
 // -----------------------------------------------------------------------------
 
-// -----------------------------------------------------------------------------
 // Importation du canvas 3D
 const canvas3D = document.getElementById("scene3D");
 
-// Vérification toutes les 10 secondes (Polling)
+// Vérification toutes les 10 secondes (Polling) -------------------------------
 setInterval(Polling, 10000);
 async function Polling() {
   const musicData = await obtenirMetadonneesMusique();
@@ -30,6 +30,7 @@ async function Polling() {
     console.log("Détails complets de ReccoBeats (content) :", musicData.reccobeats.content);
   }
 }
+// -----------------------------------------------------------------------------
 
 // Initialisation de l'audio au clic (obligation de l'utilisateur pour démarrer l'audio)
 let audioElements = null;
@@ -47,21 +48,7 @@ window.addEventListener(
   },
   { once: true },
 );
-
-// Fonction de mapping entre audio et visuel
-// (valeur, min_entrée, max_entrée, min_sortie, max_sortie)
-const mapRange = (value, inMin, inMax, outMin, outMax) => {
-  return ((value - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;
-};
-
-// Fonction pour calculer la moyenne d'un tableau entre deux indices
-const getAverage = (array, start, end) => {
-  let sum = 0;
-  for (let i = start; i <= end; i++) {
-    sum += array[i];
-  }
-  return sum / (end - start + 1);
-};
+// -----------------------------------------------------------------------------
 
 // Récupération des éléments de la scène 3D ("Déstructuration")
 const { scene, camera, renderer } = initScene(canvas3D);
@@ -75,7 +62,7 @@ const distanceCamera = 25; // La distance entre la caméra et le centre
 const vitesseRotation = 0.002; 
 
 
-// Animation de la scène
+// Animation de la scène -------------------------------------------------------
 function animate() {
   // Si l'audio est activé
   if (audioElements) {
@@ -83,21 +70,18 @@ function animate() {
     // EQ en haut pour voir les fréquences brutes
     drawDebug(audioElements.analyser, audioElements.dataArray);
 
+    // 
+    const fluxData = obtenirDonneesLog(
+      audioElements.dataArray, 
+      monde.colonnesEQ.length,
+      audioElements.audioContext.sampleRate
+    );
+
     // EQ en bas pour le regroupement en 64 colonnes logarithmiques
-    drawDebug2(audioElements.analyser, audioElements.dataArray);
+    drawDebug2(fluxData);
 
     // Remplir le tableau avec les sons actuels
     audioElements.analyser.getByteFrequencyData(audioElements.dataArray);
-
-    // On récupère des moyennes de zones précises
-    const bass = getAverage(audioElements.dataArray, 0, 15); // Les 10 premières cases
-    const mids = getAverage(audioElements.dataArray, 20, 150); // Le milieu
-    const highs = getAverage(audioElements.dataArray, 160, 500); // Les hautes fréquences
-
-    // On mappe les valeurs pour les adapter à la scène
-    const bassMapped = mapRange(bass, 0, 255, 1, 5);
-    const midsMapped = mapRange(mids, 0, 200, 1, 5);
-    const highsMapped = mapRange(highs, 0, 100, 1, 5);
 
     // Mouvement de la caméra
     angleCamera += vitesseRotation;
@@ -106,6 +90,58 @@ function animate() {
     camera.position.y = 0; 
     camera.lookAt(0, 0, 0);
   }
+
+  // ---------------------------------------------------------------------------
+  if (audioElements && monde.colonnesEQ) {
+    // 1. Récupération des données traitées (0 à 1)
+    audioElements.analyser.getByteFrequencyData(audioElements.dataArray);
+    const fluxData = obtenirDonneesLog(
+        audioElements.dataArray, 
+        monde.colonnesEQ.length, // 64
+        audioElements.audioContext.sampleRate
+    );
+
+    // 2. Animation du Mur EQ
+    monde.colonnesEQ.forEach((colonne, i) => {
+      const intensite = fluxData[i]; // L'énergie de la colonne (0.0 à 1.0)
+
+      colonne.forEach((cube, j) => {
+        // Le "seuil" d'activation pour ce cube précis (de 0 à 1)
+        const seuilCube = j / colonne.length;
+
+        if (intensite > seuilCube) {
+          // --- ÉTAT ALLUMÉ ---
+          // On définit une couleur selon la zone (Lows, Mids, Highs) 
+          // pour correspondre à ton debug canvas
+          let color;
+          if (i / 64 < 0.12) color = 0xff4444;      // Rouge
+          else if (i / 64 < 0.65) color = 0x44ff44; // Vert
+          else color = 0x4444ff;                    // Bleu
+
+          cube.material.color.setHex(color);
+          cube.material.emissive.setHex(color);
+          // On peut même faire varier l'intensité lumineuse pour plus de punch
+          cube.material.emissiveIntensity = 0.5 + (intensite * 0.5);
+        } else {
+          // --- ÉTAT ÉTEINT ---
+          cube.material.color.setHex(0x222222); // Gris très sombre
+          cube.material.emissive.setHex(0x000000);
+          cube.material.emissiveIntensity = 0;
+        }
+      });
+    });
+
+    // 3. Animation du Flux Central (Optionnel : fait tourner les cubes)
+    monde.cubesFlux.forEach(cube => {
+        cube.rotation.x += 0.01;
+        cube.rotation.y += 0.01;
+        // On peut même les faire "pulser" sur les basses (fluxData[0])
+        const s = 1 + fluxData[0] * 1.5;
+        cube.scale.set(s, s, s);
+    });
+  }
+  // ---------------------------------------------------------------------------
+
 
   // Rendu de la scène
   renderer.render(scene, camera);
