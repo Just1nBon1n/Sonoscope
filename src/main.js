@@ -122,6 +122,9 @@ function animate() {
         }
       });
     });
+
+    // --- ANIM FLUX CENTRAL ---
+    
   }
 
   // --- RENDU FINAL ---
