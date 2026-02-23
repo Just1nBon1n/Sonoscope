@@ -141,22 +141,45 @@ export function initObjets(scene) {
   // --- FLUX CENTRAL ---
   const nbObjet = 100;
   const geoFlux = new THREE.BoxGeometry(1, 1, 1);
+  // Rayon de dispertion du nuage
+  const rayonNuage = 4;
 
   for (let i = 0; i < nbObjet; i++) {
     // Couleur aléatoire et floor avec | 0
     const hue = rand(360) | 0;
-    const matFlux = new THREE.MeshStandardMaterial({ color: `hsl(${hue}, 80%, 50%)` });
+    const matFlux = new THREE.MeshStandardMaterial({ 
+      color: `hsl(${hue}, 80%, 50%)`, 
+      emissive: `hsl(${hue}, 80%, 50%)`,
+      emissiveIntensity: 0.5
+    });
 
     const cube = new THREE.Mesh(geoFlux, matFlux);
 
-    // Position random
-    cube.position.set(rand(-4, 4), rand(-5, 5), rand(-4, 4));
+    // PHI = gère l'étagement (arc demie-cercle - vertical)
+    // 1. (-1 + (2 * i) / nbObjet) : distribue les points entre -1 et 1
+    // 2. Math.acos() : transforme -1 à 1 en un angle entre 0 et π
+    const phi = Math.acos(-1 + (2 * i) / nbObjet); 
+    
+    // THETA = gère l'éparpillement (arc cercle complet - horizontal)
+    // 1. (nbObjet * Math.PI) : surface de la sphère (proportionnelle au nombre d'objets)
+    // 2. Math.sqrt() : pour éviter que les concentration de points
+    // 3. * phi : pour faire tourner les points en fonction de leur latitude (phi)
+    const theta = Math.sqrt(nbObjet * Math.PI) * phi;
 
-    // Rotation random
-    cube.rotation.set(rand(Math.PI), rand(Math.PI), 0);
+    // Positionnement du cube en coordonnées sphériques
+    // Math.sin(phi) = taille de l'anneau à la latitude donnée (cette hauteur)
+    // Math.cos(theta) et Math.sin(theta) : placer le point sur l'anneau
+    // Math.cos(phi) : pour la hauteur du point
+    cube.position.set(
+        rayonNuage * Math.cos(theta) * Math.sin(phi),   // X
+        rayonNuage * Math.sin(theta) * Math.sin(phi),   // Z
+        rayonNuage * Math.cos(phi)                      // Y
+    );
+
+    cube.lookAt(0, 0, 0);
 
     // Scale random
-    const s = rand(0.2, 1.5);
+    const s = rand(0.4, 1.4);
     cube.scale.set(s, s, s);
 
     monde.fluxCentral.add(cube);
