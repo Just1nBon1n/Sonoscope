@@ -33,13 +33,33 @@ export async function initAudio() {
 }
 
 
-// Convertir le tableau de fréquences en valeurs normalisées (0 à 1) pour chaque bande logarithmique
+// --- Convertir le tableau de fréquences en valeurs normalisées (0 à 1) pour chaque bande logarithmique ---
 // moyennes = Float32Array = tableau de nombre decimaux (plus performant que tableau classique)
 // nbBins = nombre de bandes (colonnes) 
 // sampleRate = nombre de samples par seconde (ex: 44100 Hz)
 export function obtenirDonneesLog(dataArray, nbBins, sampleRate) {
-    const moyennes = new Float32Array(nbBins);
+    const processedData = new Float32Array(nbBins);
+    const rawData = new Float32Array(nbBins);
     const fftSize = dataArray.length; 
+
+    // --- LOUDNESS RMS ---
+    let sommeCarres = 0;
+    for (let i = 0; i < dataArray.length; i++) {
+      const amp = dataArray[i] / 255; 
+      sommeCarres += amp * amp;
+    }
+    const loudnessRMS = Math.sqrt(sommeCarres / dataArray.length);
+
+
+    // --- VOLUME GLOBAL (MOYENNE) ---
+    let sommeEnergie = 0;
+    for (let i = 0; i < dataArray.length; i++) {
+        // Somme denergie totale 
+        sommeEnergie += dataArray[i];
+    }
+
+    // Normalisé entre 0 et 1
+    const volumeGlobale = (sommeEnergie / dataArray.length) / 255; 
 
     // On calcule la fréquence max capturée (Nyquist)
     const maxHzCapturable = sampleRate / 2;
@@ -72,11 +92,34 @@ export function obtenirDonneesLog(dataArray, nbBins, sampleRate) {
         // Normalisation (0 à 1)
         let valeurNormalisee = valeurInterpolee / 255;
 
-        // Boost adaptatif : on booste un peu plus si on est dans les aigus
-        const boost = 1 + (i / nbBins) * 1.2;
-        
-        moyennes[i] = Math.min(valeurNormalisee * boost, 1.0);
+        // Valeurs finales sans mixage
+        rawData[i] = valeurNormalisee;
+
+        // --- TRAITEMENT DES DONNÉES ---
+        // 1. Exposant de dynamique pour nuancer le sons (compression)
+        // Range: 1.0 à 2.5 (1.0 = linéaire, 1.4-1.6 = musical/naturel, 2.5 = très contrasté)
+        let finalValue = Math.pow(valeurNormalisee, 1.4);
+
+        // 2. Noise gate pour couper les sons faible 
+        // Range: 0.02 à 0.9 (0.02 = très sensible, 0.15 = coupe presque tout)
+        if (valeurNormalisee < 0.06) finalValue = 0;
+
+        // 3. Gain global pour ajuster volume général
+        // Range plancher ([X] + (...)): 0.5 à 1.5 (0.5 = plus calme, 1.0 = neutre, 1.5 = plus fort)
+        // Range sensibilité (... + (volumeGlobale * X)): 0.1 à 1.2 (0.1 = mur stable, 0.4 = Dynamique standard, 1+ = mur très réactif)
+        const gainGlobal = 1 + (volumeGlobale * .4); 
+        finalValue *= gainGlobal;
+
+        // 4. High-shelf (Boost des aigus))
+        // Range : 0.2 à 1.5 (0.2 = aigus discret, 0.6 = standard, 1.2+ = aigus domiants)
+        finalValue *= (1 + (i / nbBins) * 0.6);
+
+        // Valeurs finales avec mixage des traitements
+        processedData[i] = Math.min(finalValue, 1.0);
     }
 
-    return moyennes;
+    return {
+        processedData,
+        rawData
+    };
 }

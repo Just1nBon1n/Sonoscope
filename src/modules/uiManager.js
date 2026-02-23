@@ -49,43 +49,59 @@ export function drawDebug(analyser, dataArray) {
 }
 
 
-const debugCanvas2 = document.getElementById("audioDebug2");
-const debugCtx2 = debugCanvas2.getContext("2d");
+const debugCompare = document.getElementById("audioCompareDebug");
+const debugCtx2 = debugCompare.getContext("2d");
+    
+export function drawCompareDebug(rawData, processedData) {
+    if (!debugCtx2) return;
+    
+    // 1. Nettoyage
+    debugCtx2.fillStyle = '#111';
+    debugCtx2.fillRect(0, 0, debugCompare.width, debugCompare.height);
 
-export function drawDebug2(moyennesLog) {
-    if (!debugCtx2 || !moyennesLog) return;
+    // 2. Calcul de la largeur pour chaque section
+    const halfWidth = debugCompare.width / 2;
+    const barWidth = halfWidth / processedData.length;
+    const nbBins = processedData.length;
 
-    debugCtx2.clearRect(0, 0, debugCanvas2.width, debugCanvas2.height);
-    const nbBins = moyennesLog.length;
-    const barWidth = debugCanvas2.width / nbBins;
+    // --- ZONE GAUCHE : RAW (Signal brut blanc/gris) ---
+    for (let i = 0; i < rawData.length; i++) {
+        const x = i * barWidth;
+        const h = rawData[i] * (debugCompare.height - 25);
+        
+        debugCtx2.fillStyle = 'rgba(255, 255, 255, 0.3)'; 
+        debugCtx2.fillRect(x, debugCompare.height - 20 - h, barWidth - 1, h);
+    }
 
+    // --- ZONE DROITE : PROCESSED (Tes couleurs Rouge/Vert/Bleu) ---
     for (let i = 0; i < nbBins; i++) {
-        const value = moyennesLog[i];
-        const barHeight = value * (debugCanvas2.height - 20);
-
-        // --- CALIBRAGE DES COULEURS ---
-        // On ajuste les ratios pour coller au découpage du canvas du haut
-        // Basses (Rouge) : ~12% | Médiums (Vert) : ~53% | Aigus (Bleu) : le reste
-        let color;
+        const x = halfWidth + (i * barWidth);
+        const h = processedData[i] * (debugCompare.height - 25);
         const ratio = i / nbBins;
 
-        if (ratio < 0.12) {
-            color = "#ff4444"; 
+        // Application de tes couleurs fétiches
+        if (ratio < 0.22) {
+            debugCtx2.fillStyle = "#ff4444"; // Lows (Rouge)
         } else if (ratio < 0.65) {
-            color = "#44ff44"; 
+            debugCtx2.fillStyle = "#44ff44"; // Mids (Vert)
         } else {
-            color = "#4444ff"; 
+            debugCtx2.fillStyle = "#4444ff"; // Highs (Bleu)
         }
-
-        if (value <= 0) {
-            debugCtx2.fillStyle = "#333";
-            debugCtx2.fillRect(i * barWidth, debugCanvas2.height - 21, barWidth - 1, 1);
-            continue;
-        }
-
-        debugCtx2.fillStyle = color;
-        debugCtx2.fillRect(i * barWidth, debugCanvas2.height - 20 - barHeight, barWidth - 1, barHeight);
+        
+        debugCtx2.fillRect(x, debugCompare.height - 20 - h, barWidth - 1, h);
     }
+
+    // --- ÉLÉMENTS VISUELS ---
+    debugCtx2.fillStyle = "white";
+    debugCtx2.font = "bold 10px Inter, sans-serif";
+    
+    // Séparateur vertical discret
+    debugCtx2.globalAlpha = 0.2;
+    debugCtx2.fillRect(halfWidth, 0, 1, debugCompare.height);
+    debugCtx2.globalAlpha = 1.0;
+
+    debugCtx2.fillText("PRE-MIXING (RAW)", 10, 15);
+    debugCtx2.fillText("POST-MIXING (PROCESSED)", halfWidth + 10, 15);
 }
 
 
