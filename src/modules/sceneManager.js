@@ -43,13 +43,18 @@ function rand(min, max) {
 
 // --- Fonction pour générer le contenu de la scène ----------------------------
 export function initObjets(scene) {
+
+  // Rayon de la sphère
+  const rayonSpere = 4;
+
   // Création d'un objet "monde" pour organiser les éléments de la scène
   const monde = {
     socleBas: new THREE.Group(),
     socleHaut: new THREE.Group(),
     murEQ: new THREE.Group(),
     fluxCentral: new THREE.Group(),
-    cubesFlux: []
+    cubesFlux: [],
+    rayonSpere: rayonSpere
   }
   scene.add(monde.socleBas, monde.socleHaut, monde.murEQ, monde.fluxCentral);
 
@@ -139,22 +144,29 @@ export function initObjets(scene) {
 
 
   // --- FLUX CENTRAL ---
-  const nbObjet = 100;
+  const nbObjet = 150;
   const geoFlux = new THREE.BoxGeometry(1, 1, 1);
-  // Rayon de dispertion du nuage
-  const rayonNuage = 4;
 
   for (let i = 0; i < nbObjet; i++) {
-    // Couleur aléatoire et floor avec | 0
-    const hue = rand(360) | 0;
+    // 1. Couleur de base aléatoire
+    const baseColor = rand(20, 30) | 0;
+
+    // 2. Création matériau avec la couleur de base
     const matFlux = new THREE.MeshStandardMaterial({ 
-      color: `hsl(${hue}, 80%, 50%)`, 
-      emissive: `hsl(${hue}, 80%, 50%)`,
-      emissiveIntensity: 0.5
+        color: `hsl(0, 0%, ${baseColor}%)`, 
+        emissive: `hsl(0, 0%, ${baseColor}%)`,
+        emissiveIntensity: 0.5,
+        metalness: 0.7, 
+        roughness: 0.3
     });
 
+    // 3. Création du mesh avec la géométrie et le matériau
     const cube = new THREE.Mesh(geoFlux, matFlux);
 
+    // 4. Stockage de la valeur pour l'animation
+    cube.userData.baseColor = baseColor;
+
+    // 5. Positionnement des cubes dans une sphère 
     // PHI = gère l'étagement (arc demie-cercle - vertical)
     // 1. (-1 + (2 * i) / nbObjet) : distribue les points entre -1 et 1
     // 2. Math.acos() : transforme -1 à 1 en un angle entre 0 et π
@@ -171,17 +183,25 @@ export function initObjets(scene) {
     // Math.cos(theta) et Math.sin(theta) : placer le point sur l'anneau
     // Math.cos(phi) : pour la hauteur du point
     cube.position.set(
-        rayonNuage * Math.cos(theta) * Math.sin(phi),   // X
-        rayonNuage * Math.sin(theta) * Math.sin(phi),   // Z
-        rayonNuage * Math.cos(phi)                      // Y
+        rayonSpere * Math.cos(theta) * Math.sin(phi),   // X
+        rayonSpere * Math.sin(theta) * Math.sin(phi),   // Z
+        rayonSpere * Math.cos(phi)                      // Y
     );
 
-    cube.lookAt(0, 0, 0);
-
-    // Scale random
+    // 6. Scale random
     const s = rand(0.4, 1.4);
     cube.scale.set(s, s, s);
 
+    // 7. Stockage de la position originale du cube pour l'animation
+    cube.userData.originalPos = cube.position.clone();
+
+    // 8. Stockage du scale original du cube pour l'animation
+    cube.userData.originalScale = s;
+
+    // 9. Faire face au centre
+    cube.lookAt(0, 0, 0);
+
+    // 10. Ajout du cube à la scène et au tableau de cubes du flux central
     monde.fluxCentral.add(cube);
     monde.cubesFlux.push(cube);
   }
