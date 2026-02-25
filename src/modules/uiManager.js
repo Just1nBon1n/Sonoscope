@@ -14,7 +14,7 @@ export function drawDebug(analyser, dataArray) {
     const minHz = 20; 
     const maxHz = sampleRate / 2; // ~22000 Hz
 
-    // On dessine barre par barre sur la largeur du canvas
+    // Dessin barre par barre sur la largeur du canvas
     for (let x = 0; x < debugCanvas.width; x++) {
         // 1. On calcule la fréquence correspondant à cette position X sur le canvas (Log)
         // Formule : f = min * (max/min)^(x/width)
@@ -27,7 +27,7 @@ export function drawDebug(analyser, dataArray) {
         const value = dataArray[index] || 0;
         const barHeight = (value / 255) * (debugCanvas.height - 20);
 
-        // Couleur selon l'index d'origine (pour garder tes repères)
+        // 4. Couleur selon l'index d'origine 
         debugCtx.fillStyle = index < 20 ? "#ff4444" : (index < 150 ? "#44ff44" : "#4444ff");
         
         debugCtx.fillRect(x, debugCanvas.height - 20 - barHeight, 1, barHeight);
@@ -37,9 +37,10 @@ export function drawDebug(analyser, dataArray) {
     debugCtx.fillStyle = "white";
     const markers = [60, 250, 1000, 4000, 10000, 20000];
     markers.forEach(hz => {
-        // On replace le texte selon la même formule log
+        // Replace le texte selon la même formule log
         const x = debugCanvas.width * (Math.log(hz / minHz) / Math.log(maxHz / minHz));
         
+        // Dessin d'une petite encoche et le label de fréquence
         if (x >= 0 && x <= debugCanvas.width) {
             debugCtx.fillRect(x, debugCanvas.height - 25, 1, 10);
             const label = hz >= 1000 ? (hz / 1000) + "k" : hz;
@@ -64,7 +65,7 @@ export function drawCompareDebug(rawData, processedData) {
     const barWidth = halfWidth / processedData.length;
     const nbBins = processedData.length;
 
-    // --- ZONE GAUCHE : RAW (Signal brut blanc/gris) ---
+    // --- ZONE GAUCHE : RAW ---
     for (let i = 0; i < rawData.length; i++) {
         const x = i * barWidth;
         const h = rawData[i] * (debugCompare.height - 25);
@@ -73,13 +74,13 @@ export function drawCompareDebug(rawData, processedData) {
         debugCtx2.fillRect(x, debugCompare.height - 20 - h, barWidth - 1, h);
     }
 
-    // --- ZONE DROITE : PROCESSED (Tes couleurs Rouge/Vert/Bleu) ---
+    // --- ZONE DROITE : PROCESSED ---
     for (let i = 0; i < nbBins; i++) {
         const x = halfWidth + (i * barWidth);
         const h = processedData[i] * (debugCompare.height - 25);
         const ratio = i / nbBins;
 
-        // Application de tes couleurs fétiches
+        // Application des couleurs
         if (ratio < 0.22) {
             debugCtx2.fillStyle = "#ff4444"; // Lows (Rouge)
         } else if (ratio < 0.65) {
