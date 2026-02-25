@@ -1,7 +1,7 @@
 // Importation de la bibliothèque Three.js
 import * as THREE from "three";
 
-// --- Fonction d'initialisation de la scène 3D --------------------------------
+// === Fonction d'initialisation de la scène 3D ================================
 export function initScene(canvas3D) {
   // Création de la scène
   const scene = new THREE.Scene();
@@ -33,7 +33,7 @@ export function initScene(canvas3D) {
   
   return { scene, camera, renderer };
 }
-// -----------------------------------------------------------------------------
+// =============================================================================
 
 // Fonction de génération de nombre aléatoire dans une plage
 function rand(min, max) {
@@ -41,7 +41,7 @@ function rand(min, max) {
   return min + (max - min) * Math.random();
 }
 
-// --- Fonction pour générer le contenu de la scène ----------------------------
+// === Fonction pour générer le contenu de la scène ============================
 export function initObjets(scene) {
 
   // Rayon de la sphère
@@ -59,13 +59,17 @@ export function initObjets(scene) {
   scene.add(monde.socleBas, monde.socleHaut, monde.murEQ, monde.fluxCentral);
 
 
-  // --- SOCLES (Haut et Bas et Bases) ---
+  // --- SOCLES (Haut et Bas et Bases) -----------------------------------------
   // Création du socle Bas
   for (let i = 0; i < 3; i++) {
     const rayonInterieur = 13 - (i * 2);
     const rayonExterieur = 12.3 - (i * 2);
-    const geoSocleBas = new THREE.CylinderGeometry(rayonExterieur, rayonInterieur, .7, 32);
-    const matSocleBas = new THREE.MeshStandardMaterial({ color: 0x555555 });
+    const geoSocleBas = new THREE.CylinderGeometry(rayonExterieur, rayonInterieur, .7, 12);
+    const matSocleBas = new THREE.MeshStandardMaterial({ 
+      color: 0x9e9e9e,
+      metalness: 0.7, 
+      roughness: 0.3,
+      flatShading: true });
     const etageBas = new THREE.Mesh(geoSocleBas, matSocleBas);
     // Pars a -9 et monte de 0.7
     etageBas.position.y = -9 + (i * .7);
@@ -77,8 +81,13 @@ export function initObjets(scene) {
   for (let i = 0; i < 3; i++) {
     const rayonInterieur = 12.3 - (i * 2);
     const rayonExterieur = 13 - (i * 2);
-    const geoSocleHaut = new THREE.CylinderGeometry(rayonExterieur, rayonInterieur, .7, 32);
-    const matSocleHaut = new THREE.MeshStandardMaterial({ color: 0x555555 });
+    const geoSocleHaut = new THREE.CylinderGeometry(rayonExterieur, rayonInterieur, .7, 12);
+    const matSocleHaut = new THREE.MeshStandardMaterial({
+      color: 0x9e9e9e,
+      metalness: 0.7, 
+      roughness: 0.3,
+      flatShading: true 
+    });
     const etageHaut = new THREE.Mesh(geoSocleHaut, matSocleHaut);
     // Pars a 9 et descend de 0.7
     etageHaut.position.y = 9 - (i * .7);
@@ -87,7 +96,11 @@ export function initObjets(scene) {
 
   // Création de la base des socles 
   const geoBaseSocle = new THREE.CylinderGeometry(14, 14, 2, 64);
-  const matBaseSocle = new THREE.MeshStandardMaterial({ color: 0x237346 });
+  const matBaseSocle = new THREE.MeshStandardMaterial({
+    color: 0x333333,
+    metalness: 0.8,
+    roughness: 0.2 
+  });
   const baseSocleBas = new THREE.Mesh(geoBaseSocle, matBaseSocle);
   baseSocleBas.position.y = -10;
   const baseSocleHaut = new THREE.Mesh(geoBaseSocle, matBaseSocle);
@@ -95,12 +108,11 @@ export function initObjets(scene) {
   monde.socleBas.add(baseSocleBas);
   monde.socleHaut.add(baseSocleHaut);
 
-
-  // --- MUR EQ ---
+  // --- MUR EQ ----------------------------------------------------------------
   const configMurEQ = {
     nbColonnes: 64,
     cubesParColonne: 14,
-    rayon: 30,
+    rayon: 32,
     tailleCube: 2,
     espacement: 1
   };
@@ -132,8 +144,15 @@ export function initObjets(scene) {
       const hauteurTotaleColonne = configMurEQ.cubesParColonne * configMurEQ.tailleCube + (configMurEQ.cubesParColonne - 1) * configMurEQ.espacement;
       // 2. Positionnement du cube en fonction de son index dans la colonne
       const yPos = (j * (configMurEQ.tailleCube + configMurEQ.espacement)) - (hauteurTotaleColonne / 2) + (configMurEQ.tailleCube / 2);
+      // 3. application des positions 
       cube.position.set(x, yPos, z);
       cube.lookAt(0, yPos, 0);
+      // 4. Variation aléatoire en Z (range: -1 à 1)
+      const variationZ = (Math.random() - 0.5) * 2.0; 
+      cube.translateZ(variationZ);
+
+      // Stockage de la position originale du cube pour l'animation
+      cube.userData.originalPos = cube.position.clone();
 
       // Ajout du cube à la scène et à la colonne
       monde.murEQ.add(cube);
@@ -142,8 +161,7 @@ export function initObjets(scene) {
     monde.colonnesEQ.push(colonne);
   }
 
-
-  // --- FLUX CENTRAL ---
+  // --- FLUX CENTRAL ----------------------------------------------------------
   const nbObjet = 150;
   const geoFlux = new THREE.BoxGeometry(1, 1, 1);
 
@@ -208,4 +226,4 @@ export function initObjets(scene) {
 
   return monde;
 }
-// -----------------------------------------------------------------------------
+// =============================================================================
