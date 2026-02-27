@@ -1,3 +1,5 @@
+// sceneManager.js
+// Ce module gère la création et l'animation de la scène 3D avec Three.js
 // Importation de la bibliothèque Three.js
 import * as THREE from "three";
 

@@ -5,19 +5,47 @@
     <link rel="icon" type="image/svg+xml" href="/Logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sonoscope</title>
-    <link rel="stylesheet" href="src/style.css">
+    <link rel="stylesheet" href="src/style.css" />
   </head>
   <body>
-    <div id="app"></div>
+    <!-- Écran d'accueil pour entrer le pseudo Last.fm -->
+    <div id="welcome-screen">
+      <div class="welcome-content">
+        <h1>SONOSCOPE</h1>
+        <p>Entrez votre pseudo Last.fm pour commencer l'expérience</p>
+        <div class="welcome-input-group">
+          <input type="text" id="initial-user-input" placeholder="Ton pseudo..." />
+          <button id="start-app">ENTRER</button>
+        </div>
+        <p class="welcome-hint">Assurez-vous qu'une musique joue sur votre Spotify</p>
+      </div>
+    </div>
 
-    <!-- Canvas pour le debug audio -->
-    <canvas id="audioDebug" width="600" height="300" style="position: absolute; top: 10px; left: 10px; border: 1px solid #555; background: rgba(0,0,0,0.8); pointer-events: none;"></canvas>
-    <canvas id="audioCompareDebug" width="1000" height="300" style="position: absolute; bottom: 10px; left: 10px; border: 1px solid #555; background: rgba(0,0,0,0.8); pointer-events: none;"></canvas>
-
-    <!-- 3D Cube Canvas -->
+    <!-- Canvas pour la scène 3D -->
     <canvas id="scene3D"></canvas>
 
-    <!-- Main JS Module -->
+    <!-- Panel de debug pour les visualisations audio -->
+    <button id="toggle-debug">Afficher Debug</button>
+    <div id="debug-panel" class="hidden">
+      <canvas id="audioDebug"></canvas>
+      <canvas id="audioCompareDebug"></canvas>
+    </div>
+
+    <!-- Petit panneau avec les informations de la piste en cours -->
+    <div id="player-ui" class="hidden">
+      <img id="album-cover" src="" alt="Pochette" />
+      <div class="track-info">
+        <h2 id="track-title">Titre</h2>
+        <p id="track-artist">Artiste</p>
+        <div class="user-control">
+          <input type="text" id="lastfm-input" placeholder="Pseudo Last.fm..." />
+          <button id="update-user">GO</button>
+        </div>
+        <div id="color-palette"></div>
+      </div>
+    </div>
+
+    <!-- Importation du script principal de l'application -->
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

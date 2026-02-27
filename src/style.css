@@ -1,5 +1,244 @@
+/* --- RESET ET BASE --- */
 body, html {
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #050505;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: white;
+}
+
+#welcome-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #050505;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* Au-dessus de TOUT */
+    transition: opacity 1s ease, visibility 1s;
+}
+
+#welcome-screen.fade-out {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.welcome-content {
+    text-align: center;
+    max-width: 500px;
+}
+
+.welcome-content h1 {
+    font-size: 5rem;
+    letter-spacing: 15px;
+    margin-bottom: 10px;
+    font-weight: 900;
+}
+
+.welcome-input-group {
+    margin-top: 30px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+#initial-user-input {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 15px 20px;
+    border-radius: 10px;
+    color: white;
+    font-size: 1.1rem;
+    width: 250px;
+}
+
+#start-app {
+    background: white;
+    color: black;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+#start-app:hover {
+    transform: scale(1.05);
+}
+
+/* --- SCÈNE 3D --- */
+#scene3D {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1;
+}
+
+/* --- BOUTON ET PANNEAU DEBUG --- */
+#toggle-debug {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 200;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 8px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 11px;
+    backdrop-filter: blur(5px);
+    transition: all 0.2s ease;
+}
+
+#toggle-debug:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+#debug-panel {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    z-index: 150;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#debug-panel.hidden {
+    display: none;
+}
+
+#audioDebug, #audioCompareDebug {
+    width: 400px;  /* Ou la taille que tu veux */
+    height: 150px;
+    display: block;
+    background: #111; /* Pour voir si le canvas est bien là */
+    margin-bottom: 10px;
+}
+
+/* --- PLAYER UI (Bas Gauche) --- */
+#player-ui {
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
+    display: flex;
+    align-items: flex-start;
+    gap: 25px;
+    background: rgba(10, 10, 10, 0.7);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    padding: 25px;
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+    z-index: 100;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+}
+
+#player-ui.hidden {
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: none;
+}
+
+/* Pochette d'album */
+#album-cover {
+    width: 180px;
+    height: 180px;
+    border-radius: 12px;
+    object-fit: cover;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    background: #222; /* Fallback pendant le chargement */
+}
+
+/* Section Infos */
+.track-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 220px;
+}
+
+#track-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #ffffff;
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#track-artist {
+    margin: 4px 0 18px 0;
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 400;
+}
+
+/* --- CONTRÔLE UTILISATEUR --- */
+.user-control {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+#lastfm-input {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: white;
+    padding: 8px 12px;
+    font-size: 13px;
+    outline: none;
+    width: 150px;
+    transition: border-color 0.2s;
+}
+
+#lastfm-input:focus {
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+#update-user {
+    background: rgba(255, 255, 255, 0.9);
+    color: black;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+#update-user:hover {
+    background: white;
+    transform: translateY(-1px);
+}
+
+/* --- PALETTE DE COULEURS --- */
+#color-palette {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    width: fit-content;
+}
+
+.swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    background-color: #222;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: background-color 0.8s ease; /* Transition douce pour les couleurs */
 }

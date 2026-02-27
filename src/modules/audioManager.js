@@ -1,5 +1,8 @@
+// audioManager.js
+// Ce module gère la capture du flux audio et l'extraction des données de fréquence en temps réel
 import { float } from "three/tsl";
 
+// === Fonction d'initialisation de l'audio ====================================
 export async function initAudio() {
   // try/catch au lieu de if/else pour gérer les erreurs sans bloquer le code
   try {
@@ -8,8 +11,18 @@ export async function initAudio() {
       window.AudioContext || window.webkitAudioContext
     )();
 
+    if (audioContext.state === "suspended") {
+      await audioContext.resume();
+    }
+
     // 2. Demander l'accès au flux (ton VB-Cable sélectionné dans Chrome)
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+      },
+    });
     // 2.5 Créer la source du flux audio (le stream source)
     const source = audioContext.createMediaStreamSource(stream);
 
@@ -31,9 +44,10 @@ export async function initAudio() {
     return null;
   }
 }
+// =============================================================================
 
 
-// --- Convertir le tableau de fréquences en valeurs normalisées (0 à 1) pour chaque bande logarithmique ---
+// === Convertir le tableau de fréquences en valeurs normalisées (0 à 1) pour chaque bande logarithmique ===
 // moyennes = Float32Array = tableau de nombre decimaux (plus performant que tableau classique)
 // nbBins = nombre de bandes (colonnes) 
 // sampleRate = nombre de samples par seconde (ex: 44100 Hz)

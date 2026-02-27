@@ -1,13 +1,19 @@
+// Sonoscope - Visualiseur de musique en temps réel
+// Fichier principal : src/main.js
+// Ce fichier initialise la scène 3D, gère l'audio et lance l'animation
 // === Fichier principal de l'application ======================================
 // Importation des fonctions des modules
 import { initAudio, obtenirDonneesLog } from "./modules/audioManager.js";
-import { initScene, initObjets } from "./modules/sceneManager.js";
-import { obtenirMetadonneesMusique } from "./modules/metaDataManager.js";
+import { extractionCouleurs } from "./modules/colorManager.js";
 import { initGUI } from "./modules/guiManager.js";
-import { drawDebug, drawCompareDebug } from "./modules/uiManager.js";
+import { obtenirMetadonneesMusique, setLastFmUser } from "./modules/metaDataManager.js";
+import { initScene, initObjets } from "./modules/sceneManager.js";
+import { updateMusiqueUI, initPaletteUI, setupDebugToggle, drawDebug, drawCompareDebug} from "./modules/uiManager.js";
 
 // === Importation de la bibliothèque Three.js et des modules ==================
 import * as THREE from "three";
+import ColorThief from "colorthief";
+import GUI from "lil-gui";
 
 // === Gestion resize de la fenêtre ============================================
 window.addEventListener("resize", () => {
@@ -21,24 +27,119 @@ window.addEventListener("resize", () => {
 });
 // =============================================================================
 
-// Importation du canvas 3D
-const canvas3D = document.getElementById("scene3D");
+// === Gestion du démarrage ====================================================
+// Analyse de l'URL pour récupérer le pseudo Last.fm (ex: ?user=MonPseudo)
+const urlParams = new URLSearchParams(window.location.search);
+// Variable de pseudo dans l'URL
+const userFromUrl = urlParams.get("user");
+// Variable de pseudo dans la mémoire locale du navigateur
+const userFromMemory = localStorage.getItem("sonoscope_user");
+
+// On définit le pseudo prioritaire dès le début (URL > Mémoire > Valeur par défaut)
+const pseudoAuDemarrage = userFromUrl || userFromMemory;
+
+// On initialise les composants UI
+initPaletteUI();
+setupDebugToggle();
+
+// Différent éléments du UI
+// Écran d'accueil
+const welcomeScreen = document.getElementById("welcome-screen");
+// Bouton de démarrage
+const startBtn = document.getElementById("start-app");
+// Input du pseudo dans le démarrage
+const initialInput = document.getElementById("initial-user-input");
+// Input du pseudo dans le player
+const playerInput = document.getElementById("lastfm-input");
+
+// Si un pseudo est présent (URL ou mémoire), on l'utilise dans les inputs
+if (pseudoAuDemarrage) {
+  initialInput.value = pseudoAuDemarrage;
+  playerInput.value = pseudoAuDemarrage;
+}
+
+// Événement de clic sur le bouton de démarrage (Agit comme le clic initial pour activer l'audio)
+startBtn.addEventListener("click", async () => {
+  // On utilise le pseudo défini au démarrage 
+  // trim pour éviter les espaces vides
+  const user = initialInput.value.trim();
+  if (user) {
+    // Ajout du pseudo dans la mémoire locale 
+    localStorage.setItem("sonoscope_user", user);
+    
+    // Mise à jour de l'URL
+    const newUrl = `${window.location.origin}${window.location.pathname}?user=${user}`;
+    window.history.pushState({ path: newUrl }, '', newUrl);
+
+    // Mise a jour de l'utilisateur dans metaDataManager
+    setLastFmUser(user);
+    welcomeScreen.classList.add("fade-out");
+    
+    // initialisation de l'audio et lancement du polling
+    audioElements = await initAudio();
+    polling();
+    setInterval(polling, 10000);
+  }
+});
+
+// Bouton GO (dans le player)
+document.getElementById("update-user").addEventListener("click", () => {
+  const nouveauPseudo = playerInput.value.trim();
+  if (nouveauPseudo !== "") {
+    setLastFmUser(nouveauPseudo);
+    
+    // FIX 2 : On met aussi à jour la mémoire et l'URL ici !
+    localStorage.setItem("sonoscope_user", nouveauPseudo);
+    const newUrl = `${window.location.origin}${window.location.pathname}?user=${nouveauPseudo}`;
+    window.history.pushState({ path: newUrl }, '', newUrl);
+    
+    polling(); 
+  }
+});
+// =============================================================================
 
 // === Vérification toutes les 10 secondes (Polling) ===========================
-setInterval(Polling, 10000);
-async function Polling() {
+let dernierIsrc = null;
+
+async function polling() {
+  // Récupération des métadonnées de la musique actuelle
   const musicData = await obtenirMetadonneesMusique();
-  if (musicData) {
-    console.log(
-      `Musique détectée : "${musicData.titre}" --- ${musicData.artiste}`,
-    );
-    console.log(
-      `ISRC trouvé pour "${musicData.titre}" de ${musicData.artiste} : ${musicData.isrc}`,
-    );
-    console.log(
-      "Détails complets de ReccoBeats (content) :",
-      musicData.reccobeats.content,
-    );
+
+  // Vérification du ISRC pour éviter le double polling sur la même musique
+  if (!musicData || musicData.isrc === dernierIsrc) {
+    return;
+  }
+  // Si nouvelle musique changer le dernier ISRC
+  dernierIsrc = musicData.isrc;
+
+  // Affichage dans la console du titre et de l'artiste
+  console.log(
+    `Nouvelle musique : "${musicData.titre}" --- ${musicData.artiste}`,
+  );
+  // Affichage de l'ISRC dans la console
+  console.log(`ISRC : ${musicData.isrc}`);
+
+  // Extraction des couleurs de la pochette de l'album
+  if (musicData.pochetteUrl) {
+    try {
+      const nouvellePalette = await extractionCouleurs(musicData.pochetteUrl);
+
+      // On stocke les couleurs pour la 3D
+      monde.paletteCible = nouvellePalette;
+      if (!monde.paletteActuelle) {
+        monde.paletteActuelle = nouvellePalette.map((c) => c.clone());
+      }
+
+      // Mise à jour de l'UI avec les nouvelles métadonnées et couleurs
+      updateMusiqueUI(musicData, nouvellePalette);
+    } catch (err) {
+      console.error("Erreur lors de l'extraction des couleurs :", err);
+    }
+  }
+
+  if (musicData.reccobeats && musicData.reccobeats.content) {
+    // Affichage des audio features de ReccoBeats
+    console.log("Détails ReccoBeats :", musicData.reccobeats.content);
   }
 }
 // =============================================================================
@@ -61,9 +162,17 @@ window.addEventListener(
 );
 // =============================================================================
 
+// === Initialisation de la scène 3D et des objets =============================
+// Importation du canvas 3D
+const canvas3D = document.getElementById("scene3D");
+
 // Récupération des éléments de la scène 3D ("Déstructuration")
 const { scene, camera, renderer } = initScene(canvas3D);
 const monde = initObjets(scene);
+
+// Initialisation par défaut pour éviter les crashs au démarrage
+monde.paletteActuelle = Array(12).fill().map(() => new THREE.Color(0x404040));
+monde.paletteCible = Array(12).fill().map(() => new THREE.Color(0x404040));
 
 // Initialisation de l'interface de contrôle
 initGUI(camera, monde);
@@ -72,9 +181,18 @@ initGUI(camera, monde);
 let angleCamera = 0;
 const distanceCamera = 25; // La distance entre la caméra et le centre
 const vitesseRotation = 0.002;
+// =============================================================================
 
 // === Animation de la scène ===================================================
 function animate() {
+  if (monde.paletteActuelle && monde.paletteCible) {
+    monde.paletteActuelle.forEach((couleur, i) => {
+      if (monde.paletteCible[i]) {
+        couleur.lerp(monde.paletteCible[i], 0.05); // 0.05 = vitesse de transition
+      }
+    });
+  }
+
   // if audio est prêt et actif
   if (audioElements) {
     // --- Récupération des données audio en temps réel ------------------------
@@ -90,8 +208,12 @@ function animate() {
     );
 
     // --- CANVAS DEBUG 2D -----------------------------------------------------
-    drawDebug(audioElements.analyser, audioElements.dataArray);
-    drawCompareDebug(rawData, processedData);
+    const debugPanel = document.getElementById("debug-panel");
+    // On ne dessine que si le panel n'est pas caché (classe 'hidden')
+    if (debugPanel && !debugPanel.classList.contains('hidden')) {
+        drawDebug(audioElements.analyser, audioElements.dataArray);
+        drawCompareDebug(rawData, processedData);
+    }
 
     // --- ANIM CAMÉRA ---------------------------------------------------------
     angleCamera += vitesseRotation;
@@ -185,7 +307,7 @@ function animate() {
         // Cible de luminosité pour le cube (1 si allumé, 0 si éteint)
         const cibleLuminosite = estAllume ? 1 : 0;
 
-        // Lissage de la luminosité 
+        // Lissage de la luminosité
         // Les deux constantes varie entre 0 et 1, plus haut = plus rapideS
         const attLum = 0.5;
         const releaseLum = 0.2;
@@ -198,7 +320,7 @@ function animate() {
           vitesseLum,
         );
 
-        // Stockage luminosité actuelle 
+        // Stockage luminosité actuelle
         const intensiteLum = cube.userData.iLum;
 
         // Stockage du temps actuel pour gérer les délais d'extinction
@@ -218,9 +340,10 @@ function animate() {
           // Materiaux état allumé
           cube.material.color.setHex(color);
           cube.material.emissive.setHex(color);
-          cube.material.emissiveIntensity = intensiteLum * (0.3 + intensite * 0.7);
+          cube.material.emissiveIntensity =
+            intensiteLum * (0.3 + intensite * 0.7);
 
-          // Animation de la position du cube 
+          // Animation de la position du cube
           cube.userData.offsetZ = THREE.MathUtils.lerp(
             cube.userData.offsetZ || 0,
             2.0,

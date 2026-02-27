@@ -1,3 +1,5 @@
+// guiManager.js
+// Ce module gère la création de la GUI pour contrôler les paramètres de la scène en temps réel
 import GUI from "lil-gui";
 
 export function initGUI(camera, monde) {
@@ -11,12 +13,10 @@ export function initGUI(camera, monde) {
         camFolder.close();
     }
 
-
     // 2. --- SOCLES (Haut et Bas) ---
     const soclesFolder = gui.addFolder('Socles');
     
     soclesFolder.close();
-
 
     // 3. --- MUR EQ (Le système de colonnes) ---
     const murEQFolder = gui.addFolder('Mur EQ');
@@ -44,7 +44,6 @@ export function initGUI(camera, monde) {
     });
     
     murEQFolder.close();
-
 
     // 4. --- FLUX CENTRAL ---
     const fluxFolder = gui.addFolder('Flux Central');
