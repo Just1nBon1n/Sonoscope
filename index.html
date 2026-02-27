@@ -5,19 +5,31 @@
     <link rel="icon" type="image/svg+xml" href="/Logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sonoscope</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="src/style.css" />
   </head>
   <body>
     <!-- Écran d'accueil pour entrer le pseudo Last.fm -->
-    <div id="welcome-screen">
-      <div class="welcome-content">
+    <div id="accueil">
+      <div class="accueil-content">
         <h1>SONOSCOPE</h1>
         <p>Entrez votre pseudo Last.fm pour commencer l'expérience</p>
-        <div class="welcome-input-group">
-          <input type="text" id="initial-user-input" placeholder="Ton pseudo..." />
-          <button id="start-app">ENTRER</button>
+        <div class="accueil-input">
+          <input
+            type="text"
+            id="accueil-user-input"
+            placeholder="Ton pseudo..."
+          />
+          <button id="bouton-entrer">ENTRER</button>
         </div>
-        <p class="welcome-hint">Assurez-vous qu'une musique joue sur votre Spotify</p>
+        <p class="accueil-instruction">
+          Assurez-vous qu'une musique joue sur votre Spotify
+        </p>
       </div>
     </div>
 
@@ -31,16 +43,20 @@
       <canvas id="audioCompareDebug"></canvas>
     </div>
 
-    <!-- Petit panneau avec les informations de la piste en cours -->
+    <!-- Contrôles en haut pour changer le pseudo Last.fm -->
+    <div id="controles">
+      <div class="controles-content">
+        <input type="text" id="controles-user-input" placeholder="Pseudo Last.fm..." />
+        <button id="controles-go-bouton">GO</button>
+      </div>
+    </div>
+
+    <!-- UI pour afficher les infos de la track en cours -->
     <div id="player-ui" class="hidden">
       <img id="album-cover" src="" alt="Pochette" />
       <div class="track-info">
         <h2 id="track-title">Titre</h2>
         <p id="track-artist">Artiste</p>
-        <div class="user-control">
-          <input type="text" id="lastfm-input" placeholder="Pseudo Last.fm..." />
-          <button id="update-user">GO</button>
-        </div>
         <div id="color-palette"></div>
       </div>
     </div>

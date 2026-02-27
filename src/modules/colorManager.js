@@ -38,3 +38,13 @@ export async function extractionCouleurs(imageUrl) {
   });
 }
 // =============================================================================
+
+// === Fonction de tri de la palette ===========================================
+export function trierPaletteParLuminance(palette) {
+    return palette.sort((a, b) => {
+        // Formule de luminance perçue : 0.299*R + 0.587*G + 0.114*B
+        const lumA = 0.299 * a.r + 0.587 * a.g + 0.114 * a.b;
+        const lumB = 0.299 * b.r + 0.587 * b.g + 0.114 * b.b;
+        return lumA - lumB; // Du plus petit (noir) au plus grand (blanc)
+    });
+}

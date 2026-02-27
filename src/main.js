@@ -4,11 +4,23 @@
 // === Fichier principal de l'application ======================================
 // Importation des fonctions des modules
 import { initAudio, obtenirDonneesLog } from "./modules/audioManager.js";
-import { extractionCouleurs } from "./modules/colorManager.js";
+import {
+  extractionCouleurs,
+  trierPaletteParLuminance,
+} from "./modules/colorManager.js";
 import { initGUI } from "./modules/guiManager.js";
-import { obtenirMetadonneesMusique, setLastFmUser } from "./modules/metaDataManager.js";
+import {
+  obtenirMetadonneesMusique,
+  setLastFmUser,
+} from "./modules/metaDataManager.js";
 import { initScene, initObjets } from "./modules/sceneManager.js";
-import { updateMusiqueUI, initPaletteUI, setupDebugToggle, drawDebug, drawCompareDebug} from "./modules/uiManager.js";
+import {
+  updateMusiqueUI,
+  initPaletteUI,
+  setupDebugToggle,
+  drawDebug,
+  drawCompareDebug,
+} from "./modules/uiManager.js";
 
 // === Importation de la bibliothèque Three.js et des modules ==================
 import * as THREE from "three";
@@ -44,13 +56,13 @@ setupDebugToggle();
 
 // Différent éléments du UI
 // Écran d'accueil
-const welcomeScreen = document.getElementById("welcome-screen");
+const pageAcceuil = document.getElementById("accueil");
 // Bouton de démarrage
-const startBtn = document.getElementById("start-app");
+const btnStart = document.getElementById("bouton-entrer");
 // Input du pseudo dans le démarrage
-const initialInput = document.getElementById("initial-user-input");
+const initialInput = document.getElementById("accueil-user-input");
 // Input du pseudo dans le player
-const playerInput = document.getElementById("lastfm-input");
+const playerInput = document.getElementById("controles-user-input");
 
 // Si un pseudo est présent (URL ou mémoire), on l'utilise dans les inputs
 if (pseudoAuDemarrage) {
@@ -59,41 +71,44 @@ if (pseudoAuDemarrage) {
 }
 
 // Événement de clic sur le bouton de démarrage (Agit comme le clic initial pour activer l'audio)
-startBtn.addEventListener("click", async () => {
-  // On utilise le pseudo défini au démarrage 
+btnStart.addEventListener("click", async () => {
+  // On utilise le pseudo défini au démarrage
   // trim pour éviter les espaces vides
   const user = initialInput.value.trim();
   if (user) {
-    // Ajout du pseudo dans la mémoire locale 
+    // Mettre à jour le pseudo dans le input
+    if (playerInput) playerInput.value = user;
+
+    // Ajout du pseudo dans la mémoire locale
     localStorage.setItem("sonoscope_user", user);
-    
+
     // Mise à jour de l'URL
     const newUrl = `${window.location.origin}${window.location.pathname}?user=${user}`;
-    window.history.pushState({ path: newUrl }, '', newUrl);
+    window.history.pushState({ path: newUrl }, "", newUrl);
 
     // Mise a jour de l'utilisateur dans metaDataManager
     setLastFmUser(user);
-    welcomeScreen.classList.add("fade-out");
-    
+    pageAcceuil.classList.add("fade-out");
+
     // initialisation de l'audio et lancement du polling
     audioElements = await initAudio();
     polling();
-    setInterval(polling, 10000);
+    setInterval(polling, 5000);
   }
 });
 
 // Bouton GO (dans le player)
-document.getElementById("update-user").addEventListener("click", () => {
+document.getElementById("controles-go-bouton").addEventListener("click", () => {
   const nouveauPseudo = playerInput.value.trim();
   if (nouveauPseudo !== "") {
     setLastFmUser(nouveauPseudo);
-    
+
     // FIX 2 : On met aussi à jour la mémoire et l'URL ici !
     localStorage.setItem("sonoscope_user", nouveauPseudo);
     const newUrl = `${window.location.origin}${window.location.pathname}?user=${nouveauPseudo}`;
-    window.history.pushState({ path: newUrl }, '', newUrl);
-    
-    polling(); 
+    window.history.pushState({ path: newUrl }, "", newUrl);
+
+    polling();
   }
 });
 // =============================================================================
@@ -119,10 +134,12 @@ async function polling() {
   // Affichage de l'ISRC dans la console
   console.log(`ISRC : ${musicData.isrc}`);
 
-  // Extraction des couleurs de la pochette de l'album
   if (musicData.pochetteUrl) {
     try {
-      const nouvellePalette = await extractionCouleurs(musicData.pochetteUrl);
+      // Extraction de la palette de couleurs de la pochette de l'album
+      let nouvellePalette = await extractionCouleurs(musicData.pochetteUrl);
+
+      nouvellePalette = trierPaletteParLuminance(nouvellePalette);
 
       // On stocke les couleurs pour la 3D
       monde.paletteCible = nouvellePalette;
@@ -171,11 +188,16 @@ const { scene, camera, renderer } = initScene(canvas3D);
 const monde = initObjets(scene);
 
 // Initialisation par défaut pour éviter les crashs au démarrage
-monde.paletteActuelle = Array(12).fill().map(() => new THREE.Color(0x404040));
-monde.paletteCible = Array(12).fill().map(() => new THREE.Color(0x404040));
+monde.paletteActuelle = Array(12)
+  .fill()
+  .map(() => new THREE.Color(0x404040));
+monde.paletteCible = Array(12)
+  .fill()
+  .map(() => new THREE.Color(0x404040));
 
 // Initialisation de l'interface de contrôle
-initGUI(camera, monde);
+// Je n'utilise plus GUI
+// initGUI(camera, monde);
 
 // Variables pour l'animation de la caméra
 let angleCamera = 0;
@@ -185,6 +207,7 @@ const vitesseRotation = 0.002;
 
 // === Animation de la scène ===================================================
 function animate() {
+  // Pour fair eune transition fluide des couleurs
   if (monde.paletteActuelle && monde.paletteCible) {
     monde.paletteActuelle.forEach((couleur, i) => {
       if (monde.paletteCible[i]) {
@@ -210,9 +233,9 @@ function animate() {
     // --- CANVAS DEBUG 2D -----------------------------------------------------
     const debugPanel = document.getElementById("debug-panel");
     // On ne dessine que si le panel n'est pas caché (classe 'hidden')
-    if (debugPanel && !debugPanel.classList.contains('hidden')) {
-        drawDebug(audioElements.analyser, audioElements.dataArray);
-        drawCompareDebug(rawData, processedData);
+    if (debugPanel && !debugPanel.classList.contains("hidden")) {
+      drawDebug(audioElements.analyser, audioElements.dataArray);
+      drawCompareDebug(rawData, processedData);
     }
 
     // --- ANIM CAMÉRA ---------------------------------------------------------
@@ -243,6 +266,10 @@ function animate() {
       0.2,
     );
 
+    // Couleurs des socles basées sur la palette de la musique
+    const colSocle = monde.paletteActuelle[0];
+    const colSocle2 = monde.paletteActuelle[1];
+
     // Animation Socle Bas
     const forceLow = Math.pow(monde.smoothLow, 2.5);
     monde.socleBas.children.forEach((etage, i) => {
@@ -263,6 +290,8 @@ function animate() {
         // 5. Application de la rotation
         etage.rotation.y +=
           etage.userData.currentVitesse * sens * (1 + i * 0.3);
+        // 6. Application de la couleur
+        etage.material.color.copy(colSocle);
       }
     });
 
@@ -286,6 +315,8 @@ function animate() {
         // 5. Application de la rotation
         etage.rotation.y +=
           etage.userData.currentVitesse * sens * (1 + i * 0.3);
+        // 6. Application de la couleur
+        etage.material.color.copy(colSocle);
       }
     });
 
@@ -331,15 +362,16 @@ function animate() {
           // Mapping de l'index de la colonne à une couleur (lows, mids, highs)
           const ratioData = indexData / nbColonnes;
 
+          // On utilise les 3 dernières couleurs de la palette triée (les plus claires)
           if (ratioData < 0.22)
-            color = 0xff4444; // Lows
+            color = monde.paletteActuelle[4]; // Basses
           else if (ratioData < 0.65)
-            color = 0x44ff44; // Mids
-          else color = 0x4444ff; // Highs
+            color = monde.paletteActuelle[6]; // Mids
+          else color = monde.paletteActuelle[8]; // Highs
 
           // Materiaux état allumé
-          cube.material.color.setHex(color);
-          cube.material.emissive.setHex(color);
+          cube.material.color.copy(color);
+          cube.material.emissive.copy(color);
           cube.material.emissiveIntensity =
             intensiteLum * (0.3 + intensite * 0.7);
 
@@ -354,7 +386,7 @@ function animate() {
           cube.userData.lastActiveTime = now;
         } else {
           // Materiaux état éteint
-          cube.material.color.setHex(0x404040);
+          cube.material.color.setHex(0x121212);
           cube.material.emissive.setHex(0x000000);
           cube.material.emissiveIntensity = 0;
 
@@ -422,9 +454,6 @@ function animate() {
         // Valeur entre 1 et 0
         const intensiteSmooth = cube.userData.iSmooth;
 
-        // 1. Animation de rotation du cube en fonction de l'intensité
-        cube.rotation.z += intensiteSmooth * 0.1;
-
         // 2.1 Largeur de OriginalScale (100%) à largeurMin
         const largeurMin = 0.5;
         const largeur =
@@ -447,26 +476,39 @@ function animate() {
         // multiplyScalar parfait pour faire bouger a partir du centre
         cube.position.copy(cube.userData.originalPos).multiplyScalar(expansion);
 
+
         // 4.1 Animation de la couleur
-        // Courbe pour ne pas avoir progression linéaire
-        const courbeCouleur = Math.pow(intensiteSmooth, 2.5);
-        // Valeur max de la luminosité (L dans HSL)
-        const maxColor = 100;
-        // 4.2 Calcul de la luminosité actuelle
-        const currentLightness =
-          // min = baseColor max = maxColor
-          cube.userData.baseColor +
-          (maxColor - cube.userData.baseColor) * courbeCouleur;
-        // 4.3 On applique la nouvelle couleur au matériau
-        // .setHSL(hue, saturation, lightness) attend des valeurs entre 0 et 1
-        cube.material.color.setHSL(0, 0, currentLightness / 100);
-        cube.material.emissive.setHSL(0, 0, currentLightness / 100);
-        // 4.4 Animation de l'intensité de l'emissive
+        const indexVarie = 2 + (monde.fluxCentral.children.indexOf(cube) % 8);
+        const colAlbum = monde.paletteActuelle[indexVarie];
+
+        const colMax = monde.paletteActuelle[11];
+        const colRepos = new THREE.Color(0x1f1f1f);
+
+        let colFinale;
+
+        if (intensiteSmooth < 0.5) {
+          // Phase 1 : Du noir vers SA couleur assignée (index 2 à 9)
+          colFinale = colRepos.clone().lerp(colAlbum, intensiteSmooth * 2);
+        } else {
+          // Phase 2 : De SA couleur assignée vers le blanc/climax (index 11)
+          const ratioClimax = (intensiteSmooth - 0.5) * 2;
+          colFinale = colAlbum.clone().lerp(colMax, ratioClimax);
+        }
+
+        // Application de la couleur finale
+        cube.material.color.copy(colFinale);
+        // La rotation s'accélère avec l'intensité ET la couleur (index)
+        cube.rotation.z += intensiteSmooth * 0.15 + (indexVarie * 0.001);
+
+        // Animation de l'émissif (Glow)
+        cube.material.emissive.copy(colFinale);
+
         const courbeEmissive = Math.pow(intensiteSmooth, 3);
-        const maxEmissive = 2.5;
-        const baseEmissive = 0.5;
+        const maxEmissive = 4.0;
+        const baseEmissive = 0.2;
         cube.material.emissiveIntensity =
-          (maxEmissive + baseEmissive) * courbeEmissive;
+          baseEmissive + courbeEmissive * maxEmissive;
+
 
         // 5.1 Animation de la rotation de la sphère entière (flux central)
         // Courbe pour ne pas avoir progression linéaire
