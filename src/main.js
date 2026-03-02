@@ -26,6 +26,7 @@ import {
 import * as THREE from "three";
 import ColorThief from "colorthief";
 import GUI from "lil-gui";
+import { Timer } from 'three/src/core/Timer.js';
 
 // === Gestion resize de la fenêtre ============================================
 window.addEventListener("resize", () => {
@@ -203,15 +204,25 @@ monde.paletteCible = Array(12)
 let angleCamera = 0;
 const distanceCamera = 25; // La distance entre la caméra et le centre
 const vitesseRotation = 0.002;
+
+// Création d'une horloge pour les animations temporelles
+const timer = new Timer();
 // =============================================================================
 
 // === Animation de la scène ===================================================
 function animate() {
+  // Mise à jour du timer pour les animations temporelles
+  timer.update();
+  const delta = timer.getDelta();
+  // L'ajustement de la vitesse en fonction du delta pour une animation fluide même si le framerate varie
+  // la formule: Math.min(valeur * adj, 1)
+  const adj = delta * 60;
+
   // Pour fair eune transition fluide des couleurs
   if (monde.paletteActuelle && monde.paletteCible) {
     monde.paletteActuelle.forEach((couleur, i) => {
       if (monde.paletteCible[i]) {
-        couleur.lerp(monde.paletteCible[i], 0.05); // 0.05 = vitesse de transition
+        couleur.lerp(monde.paletteCible[i], Math.min(0.05 * adj, 1)); // 0.05 = vitesse de transition
       }
     });
   }
@@ -239,7 +250,7 @@ function animate() {
     }
 
     // --- ANIM CAMÉRA ---------------------------------------------------------
-    angleCamera += vitesseRotation;
+    angleCamera += vitesseRotation * adj; 
     camera.position.x = Math.cos(angleCamera) * distanceCamera;
     camera.position.z = Math.sin(angleCamera) * distanceCamera;
     camera.lookAt(0, 0, 0);
@@ -259,12 +270,8 @@ function animate() {
     const rawHigh = sommeHigh / 24;
 
     // Lissage
-    monde.smoothLow = THREE.MathUtils.lerp(monde.smoothLow || 0, rawLow, 0.1);
-    monde.smoothHigh = THREE.MathUtils.lerp(
-      monde.smoothHigh || 0,
-      rawHigh,
-      0.2,
-    );
+    monde.smoothLow = THREE.MathUtils.lerp(monde.smoothLow || 0, rawLow, Math.min(0.2 * adj, 1));
+    monde.smoothHigh = THREE.MathUtils.lerp(monde.smoothHigh || 0, rawHigh, Math.min(0.2 * adj, 1));
 
     // Couleurs des socles basées sur la palette de la musique
     const colSocle = monde.paletteActuelle[0];
@@ -285,11 +292,11 @@ function animate() {
         etage.userData.currentVitesse = THREE.MathUtils.lerp(
           etage.userData.currentVitesse || 0,
           cibleVitesse,
-          0.05,
+          Math.min(0.05 * adj, 1),
         );
         // 5. Application de la rotation
         etage.rotation.y +=
-          etage.userData.currentVitesse * sens * (1 + i * 0.3);
+          etage.userData.currentVitesse * sens * (1 + i * 0.3) * adj;
         // 6. Application de la couleur
         etage.material.color.copy(colSocle);
       }
@@ -310,11 +317,11 @@ function animate() {
         etage.userData.currentVitesse = THREE.MathUtils.lerp(
           etage.userData.currentVitesse || 0,
           cibleVitesse,
-          0.05,
+          Math.min(0.05 * adj, 1),
         );
         // 5. Application de la rotation
         etage.rotation.y +=
-          etage.userData.currentVitesse * sens * (1 + i * 0.3);
+          etage.userData.currentVitesse * sens * (1 + i * 0.3) * adj;
         // 6. Application de la couleur
         etage.material.color.copy(colSocle);
       }
@@ -348,7 +355,7 @@ function animate() {
         cube.userData.iLum = THREE.MathUtils.lerp(
           cube.userData.iLum || 0,
           cibleLuminosite,
-          vitesseLum,
+          Math.min(vitesseLum * adj, 1),
         );
 
         // Stockage luminosité actuelle
@@ -372,16 +379,16 @@ function animate() {
           // Materiaux état allumé
           cube.material.color.copy(color);
           cube.material.emissive.copy(color);
-          cube.material.emissiveIntensity =
-            intensiteLum * (0.3 + intensite * 0.7);
+          cube.material.emissiveIntensity = intensiteLum * (0.3 + intensite * 0.7);
 
-          // Animation de la position du cube
+          // Animation Z de la position du cube
+          const amplitudeZ = 2.0; // Amplitude maximale de la translation en Z
           cube.userData.offsetZ = THREE.MathUtils.lerp(
             cube.userData.offsetZ || 0,
-            2.0,
-            0.8,
+            amplitudeZ * intensite,
+            Math.min(0.8 * adj, 1),
           );
-
+          
           // Mise à jour du temps de la dernière activation du cube
           cube.userData.lastActiveTime = now;
         } else {
@@ -398,7 +405,7 @@ function animate() {
             cube.userData.offsetZ = THREE.MathUtils.lerp(
               cube.userData.offsetZ || 0,
               0,
-              0.05,
+              Math.min(0.05 * adj, 1),
             );
           }
         }
@@ -440,14 +447,14 @@ function animate() {
         // Entre 0 et 1, plus haut = plus rapide
         const vitesseLerp =
           intensite > (cube.userData.iSmooth || 0)
-            ? 0.4 // Vitesse de montée (attaque)
-            : 0.2; // Vitesse de descente (release)
+            ? 0.8 // Vitesse de montée (attaque)
+            : 0.1; // Vitesse de descente (release)
 
         // Application du lerp
         cube.userData.iSmooth = THREE.MathUtils.lerp(
           cube.userData.iSmooth || 0,
           intensite,
-          vitesseLerp,
+          Math.min(vitesseLerp * adj, 1),
         );
 
         // Stockage de l'intensité lissée pour les animations
@@ -461,21 +468,22 @@ function animate() {
           (largeurMin - cube.userData.originalScale) * intensiteSmooth;
 
         // 2.2 Longueur : de OriginalScale (100%) à longueurMax
+        const intensitePointe = Math.pow(intensiteSmooth, 2);
         const longueurMax = 4.5;
         const longueur =
           cube.userData.originalScale +
-          (longueurMax - cube.userData.originalScale) * intensiteSmooth;
+          (longueurMax - cube.userData.originalScale) * intensitePointe;
 
         // 2.3 Appliquer la nouvelle échelle au cube
         cube.scale.set(largeur, largeur, longueur);
 
         // 3. Animation de la position (expansion à partir du centre)
+        const impulsion = Math.pow(intensiteSmooth, 1.5);
         // Force de l'expansion (ex: 0.8 = 80% d'expansion max)
         const forceExpansion = 0.8;
-        const expansion = 1.0 + intensiteSmooth * forceExpansion;
+        const expansion = 1.0 + impulsion * forceExpansion;
         // multiplyScalar parfait pour faire bouger a partir du centre
         cube.position.copy(cube.userData.originalPos).multiplyScalar(expansion);
-
 
         // 4.1 Animation de la couleur
         const indexVarie = 2 + (monde.fluxCentral.children.indexOf(cube) % 8);
@@ -498,7 +506,7 @@ function animate() {
         // Application de la couleur finale
         cube.material.color.copy(colFinale);
         // La rotation s'accélère avec l'intensité ET la couleur (index)
-        cube.rotation.z += intensiteSmooth * 0.15 + (indexVarie * 0.001);
+        cube.rotation.z += (intensiteSmooth * 0.15 + (indexVarie * 0.001)) * adj;
 
         // Animation de l'émissif (Glow)
         cube.material.emissive.copy(colFinale);
@@ -518,7 +526,7 @@ function animate() {
         const vitesseImpact = 0.0001;
         // 5.3 Application de la rotation à la sphère entière
         monde.fluxCentral.rotation.y +=
-          vitesseConstante + courbeRotation * vitesseImpact;
+          (vitesseConstante + courbeRotation * vitesseImpact) * adj;
       }
     });
   }

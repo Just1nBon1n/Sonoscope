@@ -31,10 +31,10 @@ export function initScene(canvas3D) {
   scene.fog = new THREE.FogExp2(0x050505, 0.01);
 
   // AJOUT LUMIERE DE BASE
-  const ambient = new THREE.AmbientLight(0xffffff, 0.1);
-  const point1 = new THREE.PointLight(0xffffff, 0.8);
+  const ambient = new THREE.AmbientLight(0xffffff, 1);
+  const point1 = new THREE.PointLight(0xffffff, 50);
   point1.position.set(10, 10, 10);
-  const point2 = new THREE.PointLight(0xffffff, 0.5);
+  const point2 = new THREE.PointLight(0xffffff, 50);
   point2.position.set(-10, -10, -10);
   scene.add(ambient, point1, point2);
   
