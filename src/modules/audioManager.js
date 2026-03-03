@@ -139,7 +139,7 @@ export function obtenirDonneesLog(dataArray, nbBins, sampleRate) {
 
     // 4. High-shelf (Boost des aigus))
     // Range : 0.2 à 1.5 (0.2 = aigus discret, 0.6 = standard, 2+ = aigus domiants)
-    finalValue *= 1 + (i / nbBins) * 0.8;
+    finalValue *= 1 + (i / nbBins) * 1.4;
 
     // Valeurs finales avec mixage des traitements
     processedData[i] = Math.min(finalValue, 1.0);

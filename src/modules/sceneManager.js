@@ -33,31 +33,51 @@ export function initScene(canvas3D) {
     antialias: false,   // Post-processing gère l'anti-aliasing
     powerPreference: "high-performance",
   })
+
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.toneMappingExposure = 1.0;
   
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));   // Important pour la netteté
   renderer.outputColorSpace = THREE.SRGBColorSpace;               // Pour des couleurs plus réalistes
 
   // Ajout d'un léger brouillard pour plus de profondeur
-  scene.fog = new THREE.FogExp2(0x050505, 0.01);
-  renderer.setClearColor(scene.fog.color);
+  scene.fog = new THREE.FogExp2(0x020202, 0.008); 
+  renderer.setClearColor(0x020202);
 
-  // AJOUT LUMIERE DE BASE
-  const ambient = new THREE.AmbientLight(0xffffff, 0.1);
-  const point1 = new THREE.PointLight(0xffffff, 15);
-  point1.position.set(10, 10, 10);
-  const point2 = new THREE.PointLight(0xffffff, 10);
-  point2.position.set(-10, -10, -10);
-  scene.add(ambient, point1, point2);
+  // CRÉATION DES LUMIÈRES
+  const lightTop = new THREE.DirectionalLight(0xffffff, 2);
+  lightTop.position.set(0, 15, 5); // Éclaire les socles par le dessus/devant
+  scene.add(lightTop);
+
+  const lightBottom = new THREE.DirectionalLight(0xffffff, 2);
+  lightBottom.position.set(0, -15, 5); // Éclaire les socles par le dessous
+  scene.add(lightBottom);
+
+  // CRÉATION DE LA SOURCE DES RAYONS
+  const sourceGeo = new THREE.SphereGeometry(2, 32, 32);
+  const sourceMat = new THREE.MeshStandardMaterial({ 
+    color: 0x000000,           
+    emissive: 0xffffff,        
+    emissiveIntensity: 0.2,    
+    transparent: true,
+    opacity: 0.8
+  });
+  const sourceLumineuse = new THREE.Mesh(sourceGeo, sourceMat);
+  sourceLumineuse.position.set(0, 0, 0); // Au centre du flux
+  scene.add(sourceLumineuse);
   
-  return { scene, camera, renderer };
+  return { scene, camera, renderer, sourceLumineuse };
 }
 // =============================================================================
 
 // === Fonction d'initialisation du post-processing ============================
 export function initPostProcessing(renderer, scene, camera, sourceLumineuse) {
   // 1. Création du composer pour le post-processing
-  const composer = new EffectComposer(renderer);
+  const composer = new EffectComposer(renderer, {
+    frameBufferType: THREE.HalfFloatType 
+  });
 
   // 2. Configuration du rendu de base
   composer.addPass(new RenderPass(scene, camera));
@@ -65,8 +85,8 @@ export function initPostProcessing(renderer, scene, camera, sourceLumineuse) {
   // 3. Configuration du bloom pour l'effet de lueur
   const bloomEffect = new BloomEffect({
     intensity: 1.5,
-    luminanceThreshold: 1.1,
-    luminanceSmoothing: 0.1,
+    luminanceThreshold: 0.3,
+    luminanceSmoothing: 0.2,
   });
 
   // 4. Configurations des rayons de lumière (God Rays) 
@@ -88,7 +108,7 @@ export function initPostProcessing(renderer, scene, camera, sourceLumineuse) {
   });
 
   // 6. Ajout des passes dans le composer (ordre important)
-  const effectPass = new EffectPass(camera, smaaEffect, bloomEffect, godRaysEffect);
+  const effectPass = new EffectPass(camera, smaaEffect, godRaysEffect, bloomEffect);
   composer.addPass(effectPass);
 
   return { composer, bloomEffect, godRaysEffect };
@@ -126,8 +146,8 @@ export function initObjets(scene) {
     const geoSocleBas = new THREE.CylinderGeometry(rayonExterieur, rayonInterieur, .7, 12);
     const matSocleBas = new THREE.MeshStandardMaterial({ 
       color: 0x9e9e9e,
-      metalness: 0.7, 
-      roughness: 0.3,
+      metalness: 0.2, 
+      roughness: 0.9,
       flatShading: true });
     const etageBas = new THREE.Mesh(geoSocleBas, matSocleBas);
     // Pars a -9 et monte de 0.7
@@ -196,7 +216,11 @@ export function initObjets(scene) {
     // Création des cubes pour chaque colonne
     for (let j = 0; j < configMurEQ.cubesParColonne; j++) {
       const matIndividuel = new THREE.MeshStandardMaterial({ 
-        color: 0x404040, 
+        color: 0x000000,           
+        emissive: 0x000000,        
+        emissiveIntensity: 1.0,    
+        metalness: 0.2,            
+        roughness: 0.9, 
       });
 
       const cube = new THREE.Mesh(geoCubeEQ, matIndividuel);

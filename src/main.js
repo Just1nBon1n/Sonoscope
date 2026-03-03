@@ -185,21 +185,8 @@ window.addEventListener(
 const canvas3D = document.getElementById("scene3D");
 
 // Récupération des éléments de la scène 3D ("Déstructuration")
-const { scene, camera, renderer } = initScene(canvas3D);
+const { scene, camera, renderer, sourceLumineuse } = initScene(canvas3D);
 const monde = initObjets(scene);
-
-// CRÉATION DE LA SOURCE DES RAYONS
-const sourceGeo = new THREE.SphereGeometry(2, 32, 32);
-const sourceMat = new THREE.MeshStandardMaterial({ 
-  color: 0x000000,           
-  emissive: 0xffffff,        
-  emissiveIntensity: 0.2,    
-  transparent: true,
-  opacity: 0.8
-});
-const sourceLumineuse = new THREE.Mesh(sourceGeo, sourceMat);
-sourceLumineuse.position.set(0, 0, 0); // Au centre du flux
-scene.add(sourceLumineuse);
 
 // Initialisation du nouveau post-processing avec la source
 const { composer, bloomEffect, godRaysEffect } = initPostProcessing(renderer, scene, camera, sourceLumineuse);
@@ -303,7 +290,9 @@ function animate() {
     const colReposSocle = new THREE.Color(0x404040); 
     const colReposBase = new THREE.Color(0x303030); 
 
+    // 
     const forceLow = Math.pow(monde.smoothLow, 2.5);
+    // 
     const forceHigh = Math.pow(monde.smoothHigh, 1.8);
 
     // Calcul de la "présence sonore" pour savoir si les socles doivent etre en couleur ou en mode repos
@@ -345,9 +334,9 @@ function animate() {
         etage.scale.set(etage.userData.currentScale, etage.userData.currentScale, etage.userData.currentScale);
         // 5 Application de la couleur
         const couleurCiblePalette = (i === 1) ? colSocle2 : colSocle;
-        etage.material.color.copy(colReposSocle).lerp(couleurCiblePalette, monde.presenceSonore);
-        etage.material.emissive.copy(couleurCiblePalette);
-        etage.material.emissiveIntensity = monde.presenceSonore * (0.2 + forceLow * 1.5);
+        etage.material.color.copy(colReposSocle).lerp(couleurCiblePalette, monde.presenceSonore).convertSRGBToLinear();
+        etage.material.emissive.copy(couleurCiblePalette).convertSRGBToLinear();
+        etage.material.emissiveIntensity = monde.presenceSonore * (0.8 + forceLow * 0.2);
       }
     });
 
@@ -383,9 +372,9 @@ function animate() {
         etage.scale.set(etage.userData.currentScale, etage.userData.currentScale, etage.userData.currentScale);
         // 5. Application de la couleur
         const couleurCiblePalette = (i === 1) ? colSocle2 : colSocle;
-        etage.material.color.copy(colReposSocle).lerp(couleurCiblePalette, monde.presenceSonore);
-        etage.material.emissive.copy(couleurCiblePalette);
-        etage.material.emissiveIntensity = monde.presenceSonore * (0.2 + forceHigh * 1.5);
+        etage.material.color.copy(colReposSocle).lerp(couleurCiblePalette, monde.presenceSonore).convertSRGBToLinear();
+        etage.material.emissive.copy(couleurCiblePalette).convertSRGBToLinear();
+        etage.material.emissiveIntensity = monde.presenceSonore * (0.8 + forceHigh * 0.2);
       }
     });
 
@@ -395,9 +384,9 @@ function animate() {
     // Applique la couleur à la base fixe des socles
     monde.socleHaut.children.forEach((objet) => {
       if (objet.name === "baseFixe") {
-        objet.material.color.copy(colReposBase).lerp(colBaseFixe, monde.presenceSonore);
-        objet.material.emissive.copy(colBaseFixe);
-        objet.material.emissiveIntensity = monde.presenceSonore * 0.15;
+        objet.material.color.copy(colReposBase).lerp(colBaseFixe, monde.presenceSonore).convertSRGBToLinear();
+        objet.material.emissive.copy(colBaseFixe).convertSRGBToLinear();
+        objet.material.emissiveIntensity = monde.presenceSonore * 0.5;
       }
     });
 
@@ -452,9 +441,9 @@ function animate() {
           else color = monde.paletteActuelle[8]; // Highs
 
           // Materiaux état allumé
-          cube.material.color.copy(color);
-          cube.material.emissive.copy(color);
-          cube.material.emissiveIntensity = intensiteLum * (0.3 + intensite * 0.7);
+          cube.material.color.copy(color).convertSRGBToLinear();
+          cube.material.emissive.copy(color).convertSRGBToLinear();
+          cube.material.emissiveIntensity = intensiteLum * (0.5 + intensite * 3);
 
           // Animation Z de la position du cube
           const punch = 1 + (intensite * 1.5);
@@ -478,8 +467,8 @@ function animate() {
         // Si le cube doit être éteint
         } else {
           // Materiaux état éteint
-          cube.material.color.setHex(0x121212);
-          cube.material.emissive.setHex(0x000000);
+          cube.material.color.setHex(0x121212).convertSRGBToLinear();
+          cube.material.emissive.setHex(0x000000).convertSRGBToLinear();
           cube.material.emissiveIntensity = 0;
 
           // Délai avat que le cube revienne
@@ -601,19 +590,18 @@ function animate() {
         }
 
         // Application de la couleur finale
-        cube.material.color.copy(colFinale);
+        cube.material.color.copy(colFinale).convertSRGBToLinear();
         // La rotation s'accélère avec l'intensité ET la couleur (index)
         cube.rotation.z += (intensiteSmooth * 0.15 + (indexVarie * 0.001)) * adj;
 
         // Animation de l'émissif (Glow)
-        cube.material.emissive.copy(colFinale);
+        cube.material.emissive.copy(colFinale).convertSRGBToLinear();
 
         const courbeEmissive = Math.pow(intensiteSmooth, 3);
         const maxEmissive = 0.8;
         const baseEmissive = 0.05;
         cube.material.emissiveIntensity =
           baseEmissive + courbeEmissive * maxEmissive;
-
 
         // 5.1 Animation de la rotation de la sphère entière (flux central)
         // Courbe pour ne pas avoir progression linéaire
