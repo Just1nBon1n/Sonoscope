@@ -125,14 +125,14 @@ export function obtenirDonneesLog(dataArray, nbBins, sampleRate) {
     // --- TRAITEMENT DES DONNÉES ---
     // 1. Exposant de dynamique pour nuancer le sons (compression)
     // Range: 1.0 à 2.5 (1.0 = linéaire, 1.4-1.6 = musical/naturel, 2.5 = très contrasté)
-    let finalValue = Math.pow(valeurNormalisee, 1.6);
+    let finalValue = Math.pow(valeurNormalisee, 1.8);
 
     // 2. Noise gate pour couper les sons faible
     // Range: 0.02 à 0.9 (0.02 = très sensible, 0.15 = coupe presque tout)
     if (valeurNormalisee < 0.06) finalValue = 0;
 
     // 3. Auto-gain pour compenser les différences de volume 
-    const gainBase = 0.7; 
+    const gainBase = 0.8; 
     // Mix des gains et du volume global pour un résultat plus équilibré
     const finalGain = (gainBase + volumeGlobale * 0.4) * autoGain;
     finalValue *= finalGain;

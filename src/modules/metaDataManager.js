@@ -9,7 +9,7 @@ export async function obtenirMetadonneesMusique() {
     if (!trackInfo) return null;
 
     // Deezer
-    const deezerData = await obtenirISRCDeDeezer(trackInfo.titre, trackInfo.artiste);
+    const deezerData = await obtenirISRCDeDeezer(trackInfo.titre, trackInfo.artiste, trackInfo.album);
     if (!deezerData) return null;
 
     // Reccobeats
@@ -60,9 +60,13 @@ async function obtenirMusiqueCourante() {
     // Note : Delais de 10-15 secondes de Spotify pour envoyer à Last.fm
     const isPlaying = track["@attr"] && track["@attr"].nowplaying === "true";
 
-    // Si musique joue, retourner le titre et l'artiste
+    // Si musique joue, retourner le titre, l'artiste et l'album
     if (isPlaying) {
-      return { titre: track.name, artiste: track.artist["#text"] };
+      return {
+        titre: track.name,
+        artiste: track.artist["#text"], 
+        album: track.album["#text"]
+      };
     } else {
       console.log("Aucune musique détectée en direct sur Last.fm.");
       return null;
@@ -75,9 +79,13 @@ async function obtenirMusiqueCourante() {
 // =============================================================================
 
 // === Deezer API ==============================================================
-async function obtenirISRCDeDeezer(titre, artiste) {
+async function obtenirISRCDeDeezer(titre, artiste, album) {
+  // Nettoyage des titres pour améliorer les chances de correspondance
+  const albumClean = album ? album.split(' (')[0].split(' - ')[0] : null;
   // On construit une requête précise pour Deezer
-  const query = encodeURIComponent(`track:"${titre}" artist:"${artiste}"`);
+  let queryText = `track:"${titre}" artist:"${artiste}"`;
+  if (albumClean) queryText += ` album:"${albumClean}"`;
+  const query = encodeURIComponent(queryText);
   // URL de l'API Deezer pour rechercher un morceau, limit=1 pour rapidité (on veut juste le premier résultat)
   const url = `https://api.deezer.com/search?q=${query}&limit=1`;
   // Utilisation du proxy car l'API Deezer ne supporte pas les requêtes directes depuis le navigateur (CORS)
@@ -97,10 +105,12 @@ async function obtenirISRCDeDeezer(titre, artiste) {
         // Si jamais XL n'existe pas prend big
         pochette: reponseDeezer.data[0].album.cover_xl || reponseDeezer.data[0].album.cover_big
       }
-    } else {
-      console.warn("Aucun ISRC trouvé sur Deezer.");
-      return null;
+    } else if (albumClean) {
+      console.warn("Aucun résultat trouvé avec l'album, tentative sans album...");
+      return obtenirISRCDeDeezer(titre, artiste, null);
     }
+    console.warn("Aucun résultat trouvé sur Deezer pour :", queryText);
+    return null; 
   } catch (error) {
     console.error("Erreur lors de la récupération de l'ISRC :", error);
     return null;

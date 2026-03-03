@@ -13,7 +13,7 @@ import {
   obtenirMetadonneesMusique,
   setLastFmUser,
 } from "./modules/metaDataManager.js";
-import { initScene, initObjets } from "./modules/sceneManager.js";
+import { initScene, initObjets, initPostProcessing } from "./modules/sceneManager.js";
 import {
   updateMusiqueUI,
   initPaletteUI,
@@ -130,7 +130,7 @@ async function polling() {
 
   // Affichage dans la console du titre et de l'artiste
   console.log(
-    `Nouvelle musique : "${musicData.titre}" --- ${musicData.artiste}`,
+    `Nouvelle musique : ${musicData.titre} --- ${musicData.artiste}`,
   );
   // Affichage de l'ISRC dans la console
   console.log(`ISRC : ${musicData.isrc}`);
@@ -187,6 +187,26 @@ const canvas3D = document.getElementById("scene3D");
 // Récupération des éléments de la scène 3D ("Déstructuration")
 const { scene, camera, renderer } = initScene(canvas3D);
 const monde = initObjets(scene);
+
+// CRÉATION DE LA SOURCE DES RAYONS
+const sourceGeo = new THREE.SphereGeometry(2, 32, 32);
+const sourceMat = new THREE.MeshStandardMaterial({ 
+  color: 0x000000,           
+  emissive: 0xffffff,        
+  emissiveIntensity: 0.2,    
+  transparent: true,
+  opacity: 0.8
+});
+const sourceLumineuse = new THREE.Mesh(sourceGeo, sourceMat);
+sourceLumineuse.position.set(0, 0, 0); // Au centre du flux
+scene.add(sourceLumineuse);
+
+// Initialisation du nouveau post-processing avec la source
+const { composer, bloomEffect, godRaysEffect } = initPostProcessing(renderer, scene, camera, sourceLumineuse);
+
+monde.composer = composer;
+monde.bloom = bloomEffect;
+monde.godRays = godRaysEffect;
 
 // Initialisation par défaut pour éviter les crashs au démarrage
 monde.paletteActuelle = Array(12)
@@ -255,6 +275,8 @@ function animate() {
     camera.position.z = Math.sin(angleCamera) * distanceCamera;
     camera.lookAt(0, 0, 0);
 
+    // --- ANIM LUMIÈRES -------------------------------------------------------
+
     // --- ANIM SOCLES (Haut et Bas) -------------------------------------------
     // Analyse des zones de fréquences pour les socles
     let sommeLow = 0;
@@ -267,63 +289,115 @@ function animate() {
     for (let i = 40; i < 64; i++) {
       sommeHigh += processedData[i];
     }
-    const rawHigh = sommeHigh / 24;
+    // Boost car les high sont moins puissant que les basses
+    const rawHigh = sommeHigh / 24 * 1.2;
 
     // Lissage
     monde.smoothLow = THREE.MathUtils.lerp(monde.smoothLow || 0, rawLow, Math.min(0.2 * adj, 1));
     monde.smoothHigh = THREE.MathUtils.lerp(monde.smoothHigh || 0, rawHigh, Math.min(0.2 * adj, 1));
 
     // Couleurs des socles basées sur la palette de la musique
-    const colSocle = monde.paletteActuelle[0];
-    const colSocle2 = monde.paletteActuelle[1];
+    const colSocle = monde.paletteActuelle[1];
+    const colSocle2 = monde.paletteActuelle[2];
+    // Couleur de repos des socles 
+    const colReposSocle = new THREE.Color(0x404040); 
+    const colReposBase = new THREE.Color(0x303030); 
+
+    const forceLow = Math.pow(monde.smoothLow, 2.5);
+    const forceHigh = Math.pow(monde.smoothHigh, 1.8);
+
+    // Calcul de la "présence sonore" pour savoir si les socles doivent etre en couleur ou en mode repos
+    monde.presenceSonore = THREE.MathUtils.lerp(
+      monde.presenceSonore || 0,
+      (forceLow + forceHigh > 0.005) ? 1 : 0, 
+      Math.min(0.05 * adj, 1) // Vitesse de transition (0.05 = environ 1 seconde pour s'éteindre)
+    );
 
     // Animation Socle Bas
-    const forceLow = Math.pow(monde.smoothLow, 2.5);
     monde.socleBas.children.forEach((etage, i) => {
       if (i < 3) {
         // 1. Determiner le sens
         const sens = i % 2 === 0 ? 1 : -1;
         // 2. Vitesse de base
         const vitesseRepos = 0.002;
-        // 3. Vitesse maximale
-        const boostMax = 0.01;
+        // 3.1 Vitesse maximale
+        const boostMax = 0.02;
         const cibleVitesse = vitesseRepos + forceLow * boostMax;
-        // 4. Application avec inertie
+        // 3.2 Application avec inertie
         etage.userData.currentVitesse = THREE.MathUtils.lerp(
           etage.userData.currentVitesse || 0,
           cibleVitesse,
           Math.min(0.05 * adj, 1),
         );
-        // 5. Application de la rotation
+        // 3.3 Application de la rotation
         etage.rotation.y +=
           etage.userData.currentVitesse * sens * (1 + i * 0.3) * adj;
-        // 6. Application de la couleur
-        etage.material.color.copy(colSocle);
+        // 4.1 Cible du scale
+        const multEtage = (i + 1) * 0.1;
+        const cibleScaleLow = 1 - (forceLow * multEtage);
+        // 4.2 Anim de scale 
+        etage.userData.currentScale = THREE.MathUtils.lerp(
+          etage.userData.currentScale || 1.0,
+          cibleScaleLow,
+          Math.min(0.1 * adj, 1)
+        );
+        // 4.3 Application du scale
+        etage.scale.set(etage.userData.currentScale, etage.userData.currentScale, etage.userData.currentScale);
+        // 5 Application de la couleur
+        const couleurCiblePalette = (i === 1) ? colSocle2 : colSocle;
+        etage.material.color.copy(colReposSocle).lerp(couleurCiblePalette, monde.presenceSonore);
+        etage.material.emissive.copy(couleurCiblePalette);
+        etage.material.emissiveIntensity = monde.presenceSonore * (0.2 + forceLow * 1.5);
       }
     });
 
     // Animation Socle Haut
-    const forceHigh = Math.pow(monde.smoothHigh, 2.5);
     monde.socleHaut.children.forEach((etage, i) => {
       if (i < 3) {
         // 1. Determiner le sens
         const sens = i % 2 === 0 ? -1 : 1;
         // 2. Vitesse de base
-        const vitesseRepos = 0.003;
-        // 3. Vitesse maximale
-        const boostMax = 0.01;
+        const vitesseRepos = 0.002;
+        // 3.1 Vitesse maximale
+        const boostMax = 0.02;
         const cibleVitesse = vitesseRepos + forceHigh * boostMax;
-        // 4. Application avec inertie
+        // 3.2 Application avec inertie
         etage.userData.currentVitesse = THREE.MathUtils.lerp(
           etage.userData.currentVitesse || 0,
           cibleVitesse,
           Math.min(0.05 * adj, 1),
         );
-        // 5. Application de la rotation
+        // 3.3 Application de la rotation
         etage.rotation.y +=
           etage.userData.currentVitesse * sens * (1 + i * 0.3) * adj;
-        // 6. Application de la couleur
-        etage.material.color.copy(colSocle);
+        // 4.1 Cible du scale
+        const multEtage = (i + 1) * 0.1;
+        const cibleScaleHigh = 1.0 - (forceHigh * multEtage);
+        // 4.2 Anim de scale
+        etage.userData.currentScale = THREE.MathUtils.lerp(
+          etage.userData.currentScale || 1.0,
+          cibleScaleHigh,
+          Math.min(0.1 * adj, 1)
+        );
+        // 4.3 Application du scale
+        etage.scale.set(etage.userData.currentScale, etage.userData.currentScale, etage.userData.currentScale);
+        // 5. Application de la couleur
+        const couleurCiblePalette = (i === 1) ? colSocle2 : colSocle;
+        etage.material.color.copy(colReposSocle).lerp(couleurCiblePalette, monde.presenceSonore);
+        etage.material.emissive.copy(couleurCiblePalette);
+        etage.material.emissiveIntensity = monde.presenceSonore * (0.2 + forceHigh * 1.5);
+      }
+    });
+
+    // Couleur de la base des socles
+    const colBaseFixe = monde.paletteActuelle[0];
+
+    // Applique la couleur à la base fixe des socles
+    monde.socleHaut.children.forEach((objet) => {
+      if (objet.name === "baseFixe") {
+        objet.material.color.copy(colReposBase).lerp(colBaseFixe, monde.presenceSonore);
+        objet.material.emissive.copy(colBaseFixe);
+        objet.material.emissiveIntensity = monde.presenceSonore * 0.15;
       }
     });
 
@@ -364,6 +438,7 @@ function animate() {
         // Stockage du temps actuel pour gérer les délais d'extinction
         const now = Date.now();
 
+        // Si le cube doit être allumé
         if (intensiteLum > 0.01) {
           let color;
           // Mapping de l'index de la colonne à une couleur (lows, mids, highs)
@@ -382,15 +457,25 @@ function animate() {
           cube.material.emissiveIntensity = intensiteLum * (0.3 + intensite * 0.7);
 
           // Animation Z de la position du cube
-          const amplitudeZ = 2.0; // Amplitude maximale de la translation en Z
+          const punch = 1 + (intensite * 1.5);
+          const amplitudeZ = 2.0 * punch; // Amplitude maximale de la translation en Z
           cube.userData.offsetZ = THREE.MathUtils.lerp(
             cube.userData.offsetZ || 0,
             amplitudeZ * intensite,
-            Math.min(0.8 * adj, 1),
+            Math.min(0.4 * adj, 1),
+          );
+
+          // Animation scale du cube
+          const cibleScaleZ = 1.0 + (intensite * 1.5); 
+          cube.userData.currentScaleZ = THREE.MathUtils.lerp(
+            cube.userData.currentScaleZ || 1.0,
+            cibleScaleZ,
+            Math.min(0.8 * adj, 1) // On veut que l'écrasement soit instantané
           );
           
           // Mise à jour du temps de la dernière activation du cube
           cube.userData.lastActiveTime = now;
+        // Si le cube doit être éteint
         } else {
           // Materiaux état éteint
           cube.material.color.setHex(0x121212);
@@ -400,22 +485,34 @@ function animate() {
           // Délai avat que le cube revienne
           const delay = 300;
 
+          // Après le délai, on fait revenir le cube à sa position de base
           if (now - (cube.userData.lastActiveTime || 0) > delay) {
             // Retour à la position de base
             cube.userData.offsetZ = THREE.MathUtils.lerp(
               cube.userData.offsetZ || 0,
               0,
-              Math.min(0.05 * adj, 1),
+              Math.min(0.02 * adj, 1),
+            );
+
+            // Retour à l'échelle de base
+            cube.userData.currentScaleZ = THREE.MathUtils.lerp(
+              cube.userData.currentScaleZ || 1.0,
+              1.0,
+              Math.min(0.01 * adj, 1),
             );
           }
+          
         }
 
-        // Application de la translation en Z local du cube
+        // Application des transformations
         if (cube.userData.originalPos) {
-          // Retour a la position originale (avant translation)
           cube.position.copy(cube.userData.originalPos);
-          // Translation en Z local
-          cube.translateZ(cube.userData.offsetZ);
+          cube.translateZ(cube.userData.offsetZ || 0);
+          
+          // Force le lookAt pour garder la forme circulaire
+          cube.lookAt(0, 0, 0); 
+
+          cube.scale.set(1.0, 1.0, cube.userData.currentScaleZ || 1.0);
         }
       });
     });
@@ -495,10 +592,10 @@ function animate() {
         let colFinale;
 
         if (intensiteSmooth < 0.5) {
-          // Phase 1 : Du noir vers SA couleur assignée (index 2 à 9)
+          // Phase 1 : Du noir vers couleur assignée (index 2 à 9)
           colFinale = colRepos.clone().lerp(colAlbum, intensiteSmooth * 2);
         } else {
-          // Phase 2 : De SA couleur assignée vers le blanc/climax (index 11)
+          // Phase 2 : Couleur assignée vers le blanc/climax (index 11)
           const ratioClimax = (intensiteSmooth - 0.5) * 2;
           colFinale = colAlbum.clone().lerp(colMax, ratioClimax);
         }
@@ -512,8 +609,8 @@ function animate() {
         cube.material.emissive.copy(colFinale);
 
         const courbeEmissive = Math.pow(intensiteSmooth, 3);
-        const maxEmissive = 4.0;
-        const baseEmissive = 0.2;
+        const maxEmissive = 0.8;
+        const baseEmissive = 0.05;
         cube.material.emissiveIntensity =
           baseEmissive + courbeEmissive * maxEmissive;
 
@@ -522,8 +619,8 @@ function animate() {
         // Courbe pour ne pas avoir progression linéaire
         const courbeRotation = Math.pow(intensiteSmooth, 3);
         // 5.2 Vitesse de rotation constante + une partie qui dépend de l'intensité du son
-        const vitesseConstante = 0.00001;
-        const vitesseImpact = 0.0001;
+        const vitesseConstante = 0.00002;
+        const vitesseImpact = 0.00015;
         // 5.3 Application de la rotation à la sphère entière
         monde.fluxCentral.rotation.y +=
           (vitesseConstante + courbeRotation * vitesseImpact) * adj;
@@ -532,7 +629,7 @@ function animate() {
   }
 
   // --- RENDU FINAL ---
-  renderer.render(scene, camera);
+  composer.render();
 }
 // =============================================================================
 

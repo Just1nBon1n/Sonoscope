@@ -3,6 +3,17 @@
 // Importation de la bibliothèque Three.js
 import * as THREE from "three";
 
+// Importation du PostProcessing pour les effets visuels
+import { 
+    EffectComposer, 
+    RenderPass, 
+    BloomEffect, 
+    GodRaysEffect, 
+    EffectPass, 
+    SMAAEffect,
+    EdgeDetectionMode
+} from "postprocessing";
+
 // === Fonction d'initialisation de la scène 3D ================================
 export function initScene(canvas3D) {
   // Création de la scène
@@ -19,7 +30,7 @@ export function initScene(canvas3D) {
   // Création du rendu
   const renderer = new THREE.WebGLRenderer({
     canvas: canvas3D,
-    antialias: true,
+    antialias: false,   // Post-processing gère l'anti-aliasing
     powerPreference: "high-performance",
   })
   
@@ -29,16 +40,58 @@ export function initScene(canvas3D) {
 
   // Ajout d'un léger brouillard pour plus de profondeur
   scene.fog = new THREE.FogExp2(0x050505, 0.01);
+  renderer.setClearColor(scene.fog.color);
 
   // AJOUT LUMIERE DE BASE
-  const ambient = new THREE.AmbientLight(0xffffff, 1);
-  const point1 = new THREE.PointLight(0xffffff, 50);
+  const ambient = new THREE.AmbientLight(0xffffff, 0.1);
+  const point1 = new THREE.PointLight(0xffffff, 15);
   point1.position.set(10, 10, 10);
-  const point2 = new THREE.PointLight(0xffffff, 50);
+  const point2 = new THREE.PointLight(0xffffff, 10);
   point2.position.set(-10, -10, -10);
   scene.add(ambient, point1, point2);
   
   return { scene, camera, renderer };
+}
+// =============================================================================
+
+// === Fonction d'initialisation du post-processing ============================
+export function initPostProcessing(renderer, scene, camera, sourceLumineuse) {
+  // 1. Création du composer pour le post-processing
+  const composer = new EffectComposer(renderer);
+
+  // 2. Configuration du rendu de base
+  composer.addPass(new RenderPass(scene, camera));
+
+  // 3. Configuration du bloom pour l'effet de lueur
+  const bloomEffect = new BloomEffect({
+    intensity: 1.5,
+    luminanceThreshold: 1.1,
+    luminanceSmoothing: 0.1,
+  });
+
+  // 4. Configurations des rayons de lumière (God Rays) 
+  const godRaysEffect = new GodRaysEffect(camera, sourceLumineuse, {
+    height: 480,
+    kernelSize: 1, // Flou des rayons
+    density: 0.96,
+    decay: 0.97,
+    weight: 0.1,
+    exposure: 1.5,
+    samples: 100, // Nombre de rayons (plus haut = plus beau mais plus lourd)
+    clampMax: 1.0
+  });
+
+  // 5. Anti-aliasing de haute qualité (SMAA)
+  const smaaEffect = new SMAAEffect({
+    preset: 3, // Ultra
+    edgeDetectionMode: EdgeDetectionMode.COLOR
+  });
+
+  // 6. Ajout des passes dans le composer (ordre important)
+  const effectPass = new EffectPass(camera, smaaEffect, bloomEffect, godRaysEffect);
+  composer.addPass(effectPass);
+
+  return { composer, bloomEffect, godRaysEffect };
 }
 // =============================================================================
 
@@ -64,7 +117,6 @@ export function initObjets(scene) {
     rayonSpere: rayonSpere
   }
   scene.add(monde.socleBas, monde.socleHaut, monde.murEQ, monde.fluxCentral);
-
 
   // --- SOCLES (Haut et Bas et Bases) -----------------------------------------
   // Création du socle Bas
@@ -110,8 +162,10 @@ export function initObjets(scene) {
   });
   const baseSocleBas = new THREE.Mesh(geoBaseSocle, matBaseSocle);
   baseSocleBas.position.y = -10;
+  baseSocleBas.name = "baseFixe";
   const baseSocleHaut = new THREE.Mesh(geoBaseSocle, matBaseSocle);
   baseSocleHaut.position.y = 10;
+  baseSocleHaut.name = "baseFixe";
   monde.socleBas.add(baseSocleBas);
   monde.socleHaut.add(baseSocleHaut);
 
@@ -119,7 +173,7 @@ export function initObjets(scene) {
   const configMurEQ = {
     nbColonnes: 64,
     cubesParColonne: 14,
-    rayon: 32,
+    rayon: 34,
     tailleCube: 2,
     espacement: 1
   };
