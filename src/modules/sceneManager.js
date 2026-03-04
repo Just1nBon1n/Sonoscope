@@ -34,28 +34,40 @@ export function initScene(canvas3D) {
     powerPreference: "high-performance",
   })
 
+  // Configuration du color space et du tone mapping
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NoToneMapping;
   renderer.toneMappingExposure = 1.0;
   
+  // Configuration de la taille du rendu et du pixel ratio pour une meilleure qualité
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));   // Important pour la netteté
-  renderer.outputColorSpace = THREE.SRGBColorSpace;               // Pour des couleurs plus réalistes
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));   
 
-  // Ajout d'un léger brouillard pour plus de profondeur
+  // Ajout du brouillard pour plus de profondeur
   scene.fog = new THREE.FogExp2(0x020202, 0.008); 
   renderer.setClearColor(0x020202);
 
-  // CRÉATION DES LUMIÈRES
+  // Création des lumières directionnelles pour éclairer les socles et les cubes
+  // Directionnel vers le haut
   const lightTop = new THREE.DirectionalLight(0xffffff, 2);
-  lightTop.position.set(0, 15, 5); // Éclaire les socles par le dessus/devant
+  lightTop.position.set(0, 15, 0); // Éclaire les socles par le dessus/devant
   scene.add(lightTop);
 
+  // Directionnel vers le bas
   const lightBottom = new THREE.DirectionalLight(0xffffff, 2);
-  lightBottom.position.set(0, -15, 5); // Éclaire les socles par le dessous
+  lightBottom.position.set(0, -15, 0); // Éclaire les socles par le dessous
   scene.add(lightBottom);
 
-  // CRÉATION DE LA SOURCE DES RAYONS
+  // Debug visuel de la lumiere du haut
+  // const helperTop = new THREE.DirectionalLightHelper(lightTop, 5);
+  // scene.add(helperTop);
+
+  // Debug visuel de la lumiere du bas
+  // Pour ta DirectionalLight (lightBottom)
+  // const helperBottom = new THREE.DirectionalLightHelper(lightBottom, 5);
+  // scene.add(helperBottom);
+
+  // Création de la source des rayons (Gods Rays)
   const sourceGeo = new THREE.SphereGeometry(2, 32, 32);
   const sourceMat = new THREE.MeshStandardMaterial({ 
     color: 0x000000,           
@@ -65,7 +77,8 @@ export function initScene(canvas3D) {
     opacity: 0.8
   });
   const sourceLumineuse = new THREE.Mesh(sourceGeo, sourceMat);
-  sourceLumineuse.position.set(0, 0, 0); // Au centre du flux
+  // Positionnement au centre
+  sourceLumineuse.position.set(0, 0, 0); 
   scene.add(sourceLumineuse);
   
   return { scene, camera, renderer, sourceLumineuse };
@@ -97,18 +110,18 @@ export function initPostProcessing(renderer, scene, camera, sourceLumineuse) {
     decay: 0.97,
     weight: 0.1,
     exposure: 1.5,
-    samples: 100, // Nombre de rayons (plus haut = plus beau mais plus lourd)
+    samples: 100, // Nombre de rayons 
     clampMax: 1.0
   });
 
   // 5. Anti-aliasing de haute qualité (SMAA)
   const smaaEffect = new SMAAEffect({
-    preset: 3, // Ultra
+    preset: 3, // Preset de qualité élevée
     edgeDetectionMode: EdgeDetectionMode.COLOR
   });
 
   // 6. Ajout des passes dans le composer (ordre important)
-  const effectPass = new EffectPass(camera, smaaEffect, godRaysEffect, bloomEffect);
+  const effectPass = new EffectPass(camera, smaaEffect, /*godRaysEffect,*/ bloomEffect);
   composer.addPass(effectPass);
 
   return { composer, bloomEffect, godRaysEffect };
@@ -123,7 +136,6 @@ function rand(min, max) {
 
 // === Fonction pour générer le contenu de la scène ============================
 export function initObjets(scene) {
-
   // Rayon de la sphère
   const rayonSpere = 4;
 
@@ -148,7 +160,8 @@ export function initObjets(scene) {
       color: 0x9e9e9e,
       metalness: 0.2, 
       roughness: 0.9,
-      flatShading: true });
+      flatShading: true 
+    });
     const etageBas = new THREE.Mesh(geoSocleBas, matSocleBas);
     // Pars a -9 et monte de 0.7
     etageBas.position.y = -9 + (i * .7);
@@ -158,13 +171,14 @@ export function initObjets(scene) {
 
   // Création du socle Haut
   for (let i = 0; i < 3; i++) {
+    // Inverse les rayons pour faire le socle à l'envers
     const rayonInterieur = 12.3 - (i * 2);
     const rayonExterieur = 13 - (i * 2);
     const geoSocleHaut = new THREE.CylinderGeometry(rayonExterieur, rayonInterieur, .7, 12);
     const matSocleHaut = new THREE.MeshStandardMaterial({
       color: 0x9e9e9e,
-      metalness: 0.7, 
-      roughness: 0.3,
+      metalness: 0.2, 
+      roughness: 0.9,
       flatShading: true 
     });
     const etageHaut = new THREE.Mesh(geoSocleHaut, matSocleHaut);
@@ -177,8 +191,8 @@ export function initObjets(scene) {
   const geoBaseSocle = new THREE.CylinderGeometry(14, 14, 2, 64);
   const matBaseSocle = new THREE.MeshStandardMaterial({
     color: 0x333333,
-    metalness: 0.8,
-    roughness: 0.2 
+    metalness: 0.2,
+    roughness: 0.9 
   });
   const baseSocleBas = new THREE.Mesh(geoBaseSocle, matBaseSocle);
   baseSocleBas.position.y = -10;
@@ -190,6 +204,7 @@ export function initObjets(scene) {
   monde.socleHaut.add(baseSocleHaut);
 
   // --- MUR EQ ----------------------------------------------------------------
+  // Configuration du mur EQ
   const configMurEQ = {
     nbColonnes: 64,
     cubesParColonne: 14,
@@ -252,22 +267,24 @@ export function initObjets(scene) {
 
   for (let i = 0; i < nbObjet; i++) {
     // 1. Couleur de base aléatoire
-    const baseColor = rand(20, 30) | 0;
+    const baseColCube = rand(30, 50) | 0;
 
     // 2. Création matériau avec la couleur de base
     const matFlux = new THREE.MeshStandardMaterial({ 
-        color: `hsl(0, 0%, ${baseColor}%)`, 
-        emissive: `hsl(0, 0%, ${baseColor}%)`,
+        color: `hsl(0, 0%, ${baseColCube}%)`, 
+        emissive: `hsl(0, 0%, ${baseColCube}%)`,
         emissiveIntensity: 0.5,
-        metalness: 0.7, 
-        roughness: 0.3
+        metalness: 0.9, 
+        roughness: 0.3,
+        transparent: true,
+        opacity: 1.0
     });
 
     // 3. Création du mesh avec la géométrie et le matériau
     const cube = new THREE.Mesh(geoFlux, matFlux);
 
     // 4. Stockage de la valeur pour l'animation
-    cube.userData.baseColor = baseColor;
+    cube.userData.baseColCube = new THREE.Color(`hsl(0, 0%, ${baseColCube}%)`);
 
     // 5. Positionnement des cubes dans une sphère 
     // PHI = gère l'étagement (arc demie-cercle - vertical)

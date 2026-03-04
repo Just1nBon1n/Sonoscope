@@ -48,3 +48,26 @@ export function trierPaletteParLuminance(palette) {
         return lumA - lumB; // Du plus petit (noir) au plus grand (blanc)
     });
 }
+// =============================================================================
+
+// === Fonction d'analyse de la palette ========================================
+export function analyserPalette(palette) {
+  // Somme de la lumiance
+  let sommeLum = 0;
+  // Somme de la saturation
+  let sommeSat = 0;
+
+  // Parcours de la palette pour calculer les moyennes de luminosité et de saturation
+  palette.forEach(c => {
+    const hsl = {};
+    c.getHSL(hsl);
+    sommeLum += hsl.l;
+    sommeSat += hsl.s;
+  });
+
+  // Retour d'un objet avec les moyennes de luminosité et de saturation
+  return {
+    moyenneLum: sommeLum / palette.length,
+    moyenneSat: sommeSat / palette.length
+  };
+}
