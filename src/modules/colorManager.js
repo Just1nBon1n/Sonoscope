@@ -71,3 +71,47 @@ export function analyserPalette(palette) {
     moyenneSat: sommeSat / palette.length
   };
 }
+// =============================================================================
+
+// === Création des binômes par proximité de teinte ============================
+export function genererBinomesMur(palette) {
+  // On définit 3 bases de départ (Sombre, Moyen, Moyen-Clair)
+  // On les prend dans la palette triée pour être sûr d'avoir des bases de luminosités différentes
+  const indexBases = [1, 3, 6]; 
+  
+  return indexBases.map(idx => {
+    const couleurBase = palette[idx];
+    const hslBase = {};
+    couleurBase.getHSL(hslBase);
+
+    let meilleurNeon = null;
+    let scoreProximiteMax = -1;
+
+    palette.forEach(c => {
+      const hslC = {};
+      c.getHSL(hslC);
+
+      // CONDITION 1 : Il faut que ce soit plus lumineux que la base (+15% minimum)
+      if (hslC.l > hslBase.l + 0.15) {
+        
+        // CONDITION 2 : Calcul de la proximité de teinte (Hue)
+        // On utilise 1 - distance pour avoir un score (1 = teintes identiques)
+        const diffHue = Math.abs(hslBase.h - hslC.h);
+        const distanceHue = Math.min(diffHue, 1 - diffHue); // Gère le cercle chromatique
+        const scoreTeinte = 1 - distanceHue;
+
+        // On cherche le score le plus haut (la teinte la plus proche)
+        if (scoreTeinte > scoreProximiteMax) {
+          scoreProximiteMax = scoreTeinte;
+          meilleurNeon = c;
+        }
+      }
+    });
+
+    // FALLBACK : Si on n'a rien trouvé de plus lumineux avec la même teinte, 
+    // on prend simplement la couleur la plus claire de la palette (index 11)
+    if (!meilleurNeon) meilleurNeon = palette[11];
+
+    return [couleurBase, meilleurNeon];
+  });
+}

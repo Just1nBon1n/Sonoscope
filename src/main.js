@@ -8,6 +8,7 @@ import {
   extractionCouleurs,
   trierPaletteParLuminance,
   analyserPalette,
+  genererBinomesMur
 } from "./modules/colorManager.js";
 import { initGUI } from "./modules/guiManager.js";
 import {
@@ -181,13 +182,21 @@ async function gestionCouleurs(musicData) {
       );
       // -----------------------------------------------------------------------
 
-      // 4. Mise à jour des références pour la transition 3D
+      // 4. Génération des binômes de couleurs pour les murs en fonction de la palette
+      const binomes = genererBinomesMur(nouvellePalette);
+      monde.binomesMur = {
+        grave: binomes[0],
+        mid:   binomes[1],
+        high:  binomes[2]
+      };
+
+      // 5. Mise à jour des références pour la transition 3D
       monde.paletteCible = nouvellePalette;
       if (!monde.paletteActuelle) {
         monde.paletteActuelle = nouvellePalette.map((c) => c.clone());
       }
 
-      // 5. Interface
+      // 6. Interface
       updateMusiqueUI(musicData, nouvellePalette);
     } catch (err) {
       console.error("Erreur lors de l'extraction des couleurs :", err);
@@ -312,13 +321,13 @@ function animate() {
     // --- ANIM BLOOM ----------------------------------------------------------
     if (monde.bloom) {
       // 1. On transitionne directement vers les cibles calculées dans le polling
-      // Le Lerp se chargera de faire le chemin entre l'actuel et la cible.
+      // Lerp pour transitionner les valeurs
       monde.bloom.luminanceMaterial.threshold = THREE.MathUtils.lerp(
         monde.bloom.luminanceMaterial.threshold,
         monde.bloomThresholdCible,
         Math.min(0.05 * adj, 1),
       );
-
+      // Même chose pour l'intensité
       monde.bloom.intensity = THREE.MathUtils.lerp(
         monde.bloom.intensity,
         monde.bloomIntensityCible,
@@ -326,8 +335,8 @@ function animate() {
       );
 
       // 2. On calcule le facteur d'ambiance "en temps réel" basé sur les valeurs lissées
-      // Le facteur d'ambiance est une valeur que j'utilise pour faire varier l'intensité
-      // de la scène et créer un équilibre entre le socntrste de palette
+      // Le facteur d'ambiance est une valeur pour faire varier l'intensité
+      // de la scène et créer un équilibre entre les différences de palette
       monde.facteurAmbiance =
         (monde.bloom.luminanceMaterial.threshold +
           (1.0 - monde.bloom.intensity / 2)) /
@@ -368,12 +377,12 @@ function animate() {
     const colReposSocle = new THREE.Color(0x404040);
     const colReposBase = new THREE.Color(0x303030);
 
-    //
+    // Force des basses
     const forceLow = Math.pow(monde.smoothLow, 2.5);
-    //
+    // Force des aigus
     const forceHigh = Math.pow(monde.smoothHigh, 1.8);
 
-    // Calcul de la "présence sonore" pour savoir si les socles doivent etre en couleur ou en mode repos
+    // Calcul de la "présence sonore" pour savoir si les socles doivent on/off
     monde.presenceSonore = THREE.MathUtils.lerp(
       monde.presenceSonore || 0,
       forceLow + forceHigh > 0.005 ? 1 : 0,
@@ -414,7 +423,7 @@ function animate() {
           etage.userData.currentScale,
           etage.userData.currentScale,
         );
-        // 5 Application de la couleur
+        // 5. Application de la couleur
         const couleurCiblePalette = i === 1 ? colSocle2 : colSocle;
         etage.material.color
           .copy(colReposSocle)
@@ -423,11 +432,11 @@ function animate() {
         etage.material.emissive.copy(couleurCiblePalette).convertSRGBToLinear();
         const EmISocleBas = THREE.MathUtils.mapLinear(
           monde.facteurAmbiance || 0.2,
-          0.1,
-          0.9,
-          0.8,
-          0.2,
+          0.1, 0.9,   // Plage d'entrée (0.1 = ambiance sombre, 0.9 = ambiance lumineuse)
+          0.8,        // Sortie min (Ambiance sombre) : plus d'émissivité
+          0.2,        // Sortie max (Ambiance lumineuse) : moins d'émissivité
         );
+        // 6. Application de l'émissivité 
         etage.material.emissiveIntensity =
           monde.presenceSonore * (EmISocleBas + forceLow * 0.2);
       }
@@ -476,11 +485,11 @@ function animate() {
         etage.material.emissive.copy(couleurCiblePalette).convertSRGBToLinear();
         const EmISocleHaut = THREE.MathUtils.mapLinear(
           monde.facteurAmbiance || 0.2,
-          0.1,
-          0.9,
-          0.8,
-          0.2,
+          0.1, 0.9,   // Plage d'entrée (0.1 = ambiance sombre, 0.9 = ambiance lumineuse)
+          0.8,        // Sortie min (Ambiance sombre) : plus d'émissivité
+          0.2,        // Sortie max (Ambiance lumineuse) : moins d'émissivité
         );
+        // 6. Application de l'émissivité
         etage.material.emissiveIntensity =
           monde.presenceSonore * (EmISocleHaut + forceLow * 0.2);
       }
@@ -499,10 +508,9 @@ function animate() {
         objet.material.emissive.copy(colBaseFixe).convertSRGBToLinear();
         const EmIbaseSocle = THREE.MathUtils.mapLinear(
           monde.facteurAmbiance || 0.2,
-          0.1,
-          0.9,
-          0.8,
-          0.2,
+          0.1, 0.9,   // Plage d'entrée (0.1 = ambiance sombre, 0.9 = ambiance lumineuse)
+          0.8,        // Sortie min (Ambiance sombre) : plus d'émissivité
+          0.2,        // Sortie max (Ambiance lumineuse) : moins d'émissivité
         );
         objet.material.emissiveIntensity =
           monde.presenceSonore * (EmIbaseSocle + forceLow * 0.2);
@@ -518,66 +526,79 @@ function animate() {
       // Valeur d'intensité entre 0 et 1
       const intensite = processedData[indexData];
 
+      if (!colonne.valeurPeak) colonne.valeurPeak = 0;
+
+      if (intensite > colonne.valeurPeak) {
+        // Montée instantanée
+        colonne.valeurPeak = intensite;
+      } else {
+        // Descente lente (vitesse de chute du sommet)
+        // 0.02 * adj : plus ce chiffre est petit, plus le sommet plane longtemps
+        colonne.valeurPeak = THREE.MathUtils.lerp(colonne.valeurPeak, intensite, Math.min(0.04 * adj, 1));
+      }
+
       // Boucle des cubes dans la colonne
       colonne.forEach((cube, j) => {
-        // Seuil pour allumer le cube
         const seuilCube = j / colonne.length;
-        // Détermine si le cube doit être allumé ou éteint
         const estAllume = intensite > seuilCube;
-        // Cible de luminosité pour le cube (1 si allumé, 0 si éteint)
+        
+        // 1. Calcul du sommet de chaque colonne 
+        const estSommet = colonne.valeurPeak >= seuilCube && colonne.valeurPeak < seuilCube + (1 / colonne.length);
+        
+        // 3. Calcul de la luminosité cible du cube (1 si allumé, 0 si éteint)
         const cibleLuminosite = estAllume ? 1 : 0;
-
-        // Lissage de la luminosité
-        // Les deux constantes varie entre 0 et 1, plus haut = plus rapideS
-        const attLum = 0.5;
-        const releaseLum = 0.2;
-        // Condition pour choisir la vitesse de montée ou de descente
-        const vitesseLum = estAllume ? attLum : releaseLum;
-        // Lerp pour lisser la luminosité
+        const vitesseLum = estAllume ? 0.5 : 0.2;
         cube.userData.iLum = THREE.MathUtils.lerp(
           cube.userData.iLum || 0,
           cibleLuminosite,
           Math.min(vitesseLum * adj, 1),
         );
 
-        // Stockage luminosité actuelle
+        // 4. Application de la luminosité et des couleurs
         const intensiteLum = cube.userData.iLum;
-
-        // Stockage du temps actuel pour gérer les délais d'extinction
         const now = Date.now();
 
-        // Si le cube doit être allumé
-        if (intensiteLum > 0.01) {
-          let color;
-          // Mapping de l'index de la colonne à une couleur (lows, mids, highs)
+        const doitEtreVisible = intensiteLum > 0.01 || estSommet;
+        // Si assez lumineux 
+        if (doitEtreVisible) {
           const ratioData = indexData / nbColonnes;
+          let paire;
 
-          // On utilise les 3 dernières couleurs de la palette triée (les plus claires)
-          if (ratioData < 0.22)
-            color = monde.paletteActuelle[4]; // Basses
-          else if (ratioData < 0.65)
-            color = monde.paletteActuelle[6]; // Mids
-          else color = monde.paletteActuelle[8]; // Highs
+          if (ratioData < 0.22) paire = monde.binomesMur?.grave;
+          else if (ratioData < 0.65) paire = monde.binomesMur?.mid;
+          else paire = monde.binomesMur?.high;
 
-          // Materiaux état allumé
+          // Initialisation pour ne pas planter
+          paire = paire || [new THREE.Color(0x151515), new THREE.Color(0x555555)];
+
+          // --- ATTRIBUTION DES COULEURS ---
+          // Si c'est le cube du haut (Sommet), on prend le Néon, sinon la Base
+          const color = estSommet ? paire[1] : paire[0];
+          // BOOST : Très fort pour le sommet (Bloom), modéré pour le reste 
+          const boost = estSommet ? 2.0 : 0.7;
+
           cube.material.color.copy(color).convertSRGBToLinear();
           cube.material.emissive.copy(color).convertSRGBToLinear();
 
+          // --- CALCUL DE L'INTENSITÉ ---
+          const fAmb = Math.pow(monde.facteurAmbiance || 0.2, 2);
           const baseMur = THREE.MathUtils.mapLinear(
-            monde.facteurAmbiance || 0.2,
-            0.1, 0.9,
-            0.1,
-            0.01,
-          );
-          const punchMur = THREE.MathUtils.mapLinear(
-            monde.facteurAmbiance || 0.2,
-            0.1, 0.9,
-            2.5,
-            0.3,
+            fAmb,
+            0.01, 0.81,
+            0.25,
+            0.08
           );
 
-          cube.material.emissiveIntensity =
-            intensiteLum * (baseMur + intensite * punchMur);
+          const punchMur = THREE.MathUtils.mapLinear(
+            fAmb,
+            0.01, 0.81,
+            2.0,
+            1.0
+          );
+
+          // Application de l'intensité d'émissivité avec un boost pour les sommets
+          const lumFinale = estSommet ? 1.0 : intensiteLum;
+          cube.material.emissiveIntensity = lumFinale * (baseMur + intensite * punchMur * boost);
 
           // Animation Z de la position du cube
           const punch = 1 + intensite * 1.5;

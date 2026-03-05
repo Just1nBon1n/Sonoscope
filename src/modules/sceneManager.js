@@ -121,7 +121,7 @@ export function initPostProcessing(renderer, scene, camera, sourceLumineuse) {
   });
 
   // 6. Ajout des passes dans le composer (ordre important)
-  const effectPass = new EffectPass(camera, smaaEffect, /*godRaysEffect,*/ bloomEffect);
+  const effectPass = new EffectPass(camera, smaaEffect, godRaysEffect, bloomEffect);
   composer.addPass(effectPass);
 
   return { composer, bloomEffect, godRaysEffect };
