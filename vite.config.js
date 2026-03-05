@@ -1,5 +1,8 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  base: '/Sonoscope/', 
+  base: '/Sonoscope/',
+  build: {
+    outDir: 'docs' 
+  }
 })
