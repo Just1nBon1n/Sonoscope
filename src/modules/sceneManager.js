@@ -108,8 +108,8 @@ export function initPostProcessing(renderer, scene, camera, sourceLumineuse) {
     kernelSize: 1, // Flou des rayons
     density: 0.96,
     decay: 0.97,
-    weight: 0.1,
-    exposure: 1.5,
+    weight: 0.3,
+    exposure: 0.1,
     samples: 100, // Nombre de rayons 
     clampMax: 1.0
   });

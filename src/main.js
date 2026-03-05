@@ -317,6 +317,103 @@ function animate() {
     camera.lookAt(0, 0, 0);
 
     // --- ANIM LUMIÈRES -------------------------------------------------------
+    let sommeTotale = 0;
+    for (let i = 0; i < processedData.length; i++) {
+      sommeTotale += processedData[i];
+    }
+    // Énergie globale normalisée entre 0 et 1
+    const energieGlobale = sommeTotale / processedData.length;
+
+    // Lissage de l'énergie globale pour éviter les variations trop brusques
+    monde.smoothLoudness = THREE.MathUtils.lerp(
+      monde.smoothLoudness || 0,
+      energieGlobale,
+      Math.min(0.1 * adj, 1)
+    );
+
+    // Math.pow pour faire un impact plus marqué sur les variations de loudness
+    const punchLoudness = Math.pow(monde.smoothLoudness, 1.5);
+
+    // Mapping de l'énergie globale à une plage d'intensité lumineuse
+    if (sourceLumineuse && sourceLumineuse.material) {
+      // 1.1 Émissivité du Mesh Central 
+      const cibleEmissive = THREE.MathUtils.mapLinear(
+        monde.smoothLoudness,
+        0.05, 0.6,   // Plage d'entrée (0.05 = musique très calme, 0.6 = musique très forte)
+        0.0,         // Sortie min (Musique calme) : pas d'émissivité
+        2.5          // Sortie max (Musique forte) : forte émissivité
+      );
+      
+      // 1.2 Lerp pour faire une transition fluide de l'émissivité
+      sourceLumineuse.material.emissiveIntensity = THREE.MathUtils.lerp(
+        sourceLumineuse.material.emissiveIntensity,
+        Math.max(0, cibleEmissive),
+        Math.min(0.2 * adj, 1)
+      );
+
+      // 2. Couleur du Mesh dynamique basée sur la palette de la musique
+      if (monde.paletteActuelle && monde.paletteActuelle[11]) {
+        sourceLumineuse.material.emissive.lerpColors(
+          monde.paletteActuelle[1] || new THREE.Color(0x000000), 
+          monde.paletteActuelle[11], 
+          Math.min(punchLoudness * 2, 1)
+        );
+      }
+
+      // 3.1 Taille du mesh
+      const cibleScale = THREE.MathUtils.mapLinear(
+        punchLoudness,
+        Math.pow(0.05, 1.5), 0.5,   // Plage d'entrée (0.05 = musique très calme, 0.6 = musique très forte)
+        1.0,                        // Sortie min (Musique calme) : taille normale
+        0.4                         // Sortie max (Musique forte) : taille réduite
+      );
+
+      // 3.2 Application du scale avec lerp pour la transition fluide
+      const s = THREE.MathUtils.lerp(
+        sourceLumineuse.scale.x, // On prend x comme référence (les trois axes sont les mêmes)
+        cibleScale,
+        Math.min(0.2 * adj, 1)
+      );
+      sourceLumineuse.scale.set(s, s, s);
+    }
+
+    // Animation des rayons de lumière (God Rays) basée sur la musique
+    if (monde.godRays) {
+      // 1. Le weigth 
+      const cibleWeight = THREE.MathUtils.mapLinear(
+        monde.smoothLoudness,
+        0.05, 0.5,   // Plage d'entrée (0.05 = musique très calme, 0.5 = musique très forte)
+        0.0,         // Sortie min (Musique calme) : pas de rayons
+        1.0          // Sortie max (Musique forte) : rayons bien visibles
+      );
+      monde.godRays.weight = THREE.MathUtils.lerp(
+        monde.godRays.weight,
+        cibleWeight,
+        Math.min(0.1 * adj, 1)
+      );
+
+      // 2. L'exoposure
+      const cibleExposure = THREE.MathUtils.mapLinear(
+        monde.smoothLoudness,
+        0, 0.5,   // Plage d'entrée (0.05 = musique très calme, 0.5 = musique très forte)
+        0.1,      // Sortie min (Musique calme) : faible exposition
+        1.0       // Sortie max (Musique forte) : forte exposition
+      );
+
+      monde.godRays.exposure = THREE.MathUtils.lerp(
+        monde.godRays.exposure,
+        cibleExposure,
+        Math.min(0.2 * adj, 1)
+      );
+
+      // 3. Le decay
+      monde.godRays.decay = THREE.MathUtils.mapLinear(
+        monde.smoothLoudness,
+        0, 0.5,   // Plage d'entrée (0.05 = musique très calme, 0.5 = musique très forte)
+        0.92,     // Sortie min (Musique calme) : decay plus rapide (rayons plus courts)
+        0.98      // Sortie max (Musique forte) : decay plus lent (rayons plus longs)
+      );
+    }
 
     // --- ANIM BLOOM ----------------------------------------------------------
     if (monde.bloom) {
@@ -774,18 +871,13 @@ function animate() {
         cube.material.emissiveIntensity =
           baseEmissiveAdaptative + courbeEmissive * forceEmissiveAdaptative;
 
-        // 8.1 Animation de l'opacité
-        // Calcul: 1.0 - (intensité lissée * pourcentage d'opacité à retirer)
-        const cibleOpacite = 1.0 - intensiteSmooth * 0.1;
-        cube.material.opacity = cibleOpacite;
-
-        // 9.1 Animation de la rotation de la sphère entière (flux central)
+        // 8.1 Animation de la rotation de la sphère entière (flux central)
         // Courbe pour ne pas avoir progression linéaire
         const courbeRotation = Math.pow(intensiteSmooth, 3);
-        // 9.2 Vitesse de rotation constante + une partie qui dépend de l'intensité du son
+        // 8.2 Vitesse de rotation constante + une partie qui dépend de l'intensité du son
         const vitesseConstante = 0.00002;
         const vitesseImpact = 0.00015;
-        // 9.3 Application de la rotation à la sphère entière
+        // 8.3 Application de la rotation à la sphère entière
         monde.fluxCentral.rotation.y +=
           (vitesseConstante + courbeRotation * vitesseImpact) * adj;
       }
