@@ -105,13 +105,12 @@ export function initPostProcessing(renderer, scene, camera, sourceLumineuse) {
   // 4. Configurations des rayons de lumière (God Rays) 
   const godRaysEffect = new GodRaysEffect(camera, sourceLumineuse, {
     height: 480,
-    kernelSize: 1, // Flou des rayons
     density: 0.96,
     decay: 0.97,
     weight: 0.3,
     exposure: 0.1,
     samples: 100, // Nombre de rayons 
-    clampMax: 1.0
+    clampMax: 10.0
   });
 
   // 5. Anti-aliasing de haute qualité (SMAA)

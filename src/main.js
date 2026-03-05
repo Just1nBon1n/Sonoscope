@@ -165,8 +165,7 @@ async function gestionCouleurs(musicData) {
       const ratioLum = stats.moyenneLum;
       monde.bloomThresholdCible = THREE.MathUtils.mapLinear(
         Math.pow(ratioLum, 1.5),
-        0,
-        1, // Plage d'entrée (0 = album très sombre, 1 = album très lumineux)
+        0, 1, // Plage d'entrée (0 = album très sombre, 1 = album très lumineux)
         0.1, // Sortie min (Album noir) : plus de lumière
         0.95, // Sortie max (Album très lumineux) : moins de lumière
       );
@@ -175,8 +174,7 @@ async function gestionCouleurs(musicData) {
       const ratioSat = stats.moyenneSat;
       monde.bloomIntensityCible = THREE.MathUtils.mapLinear(
         ratioSat,
-        0,
-        1, // Plage d'entrée (0 = album très désaturé, 1 = album très saturé)
+        0, 1, // Plage d'entrée (0 = album très désaturé, 1 = album très saturé)
         2, // Sortie min (Album désaturé) : lumière plus forte
         0.8, // Sortie max (Album saturé) : lumière moins forte
       );
@@ -374,7 +372,7 @@ function animate() {
         cibleScale,
         Math.min(0.2 * adj, 1)
       );
-      sourceLumineuse.scale.set(s, s, s);
+      sourceLumineuse.scale.set(s, s, s); 
     }
 
     // Animation des rayons de lumière (God Rays) basée sur la musique
@@ -410,7 +408,7 @@ function animate() {
       monde.godRays.decay = THREE.MathUtils.mapLinear(
         monde.smoothLoudness,
         0, 0.5,   // Plage d'entrée (0.05 = musique très calme, 0.5 = musique très forte)
-        0.92,     // Sortie min (Musique calme) : decay plus rapide (rayons plus courts)
+        0.96,     // Sortie min (Musique calme) : decay plus rapide (rayons plus courts)
         0.98      // Sortie max (Musique forte) : decay plus lent (rayons plus longs)
       );
     }
@@ -655,7 +653,9 @@ function animate() {
         const intensiteLum = cube.userData.iLum;
         const now = Date.now();
 
-        const doitEtreVisible = intensiteLum > 0.01 || estSommet;
+        const sommetEstActif = estSommet && j > 0;
+
+        const doitEtreVisible = intensiteLum > 0.01 || sommetEstActif;
         // Si assez lumineux 
         if (doitEtreVisible) {
           const ratioData = indexData / nbColonnes;
@@ -678,24 +678,25 @@ function animate() {
           cube.material.emissive.copy(color).convertSRGBToLinear();
 
           // --- CALCUL DE L'INTENSITÉ ---
-          const fAmb = Math.pow(monde.facteurAmbiance || 0.2, 2);
+          const facteurAmbiancePunch = Math.pow(monde.facteurAmbiance || 0.2, 2);
           const baseMur = THREE.MathUtils.mapLinear(
-            fAmb,
-            0.01, 0.81,
-            0.25,
-            0.08
+            facteurAmbiancePunch,
+            0.01, 0.81,   // Plage d'entrée (0.01 = ambiance très sombre, 0.81 = ambiance très lumineuse)
+            0.25,         // Sortie min (Ambiance sombre) : mur plus lumineux
+            0.05          // Sortie max (Ambiance lumineuse) : mur moins lumineux
           );
 
           const punchMur = THREE.MathUtils.mapLinear(
-            fAmb,
-            0.01, 0.81,
-            2.0,
-            1.0
+            facteurAmbiancePunch,
+            0.01, 0.81,   // Plage d'entrée (0.01 = ambiance très sombre, 0.81 = ambiance très lumineuse)
+            2.0,          // Sortie min (Ambiance sombre) : boost plus fort
+            0.6           // Sortie max (Ambiance lumineuse) : boost plus modéré
           );
 
           // Application de l'intensité d'émissivité avec un boost pour les sommets
           const lumFinale = estSommet ? 1.0 : intensiteLum;
-          cube.material.emissiveIntensity = lumFinale * (baseMur + intensite * punchMur * boost);
+          const forceLum = estSommet ? 0.3 : 0.1;
+          cube.material.emissiveIntensity = lumFinale * (baseMur + forceLum * punchMur * boost);
 
           // Animation Z de la position du cube
           const punch = 1 + intensite * 1.5;
@@ -855,7 +856,7 @@ function animate() {
         const baseEmissiveAdaptative = THREE.MathUtils.mapLinear(
           monde.facteurAmbiance,
           0.1, 0.9, // Plage du facteur d'ambiance
-          0.2,
+          0.3,
           0.05, // 0.2 pour les sombres, 0.05 pour les très clairs
         );
 
