@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="Logo.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sonoscope</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+
+    <script type="module" crossorigin src="/Sonoscope/assets/index-5f75xE-k.js"></script>
+    <link rel="stylesheet" crossorigin href="/Sonoscope/assets/index-DBrcH8SW.css">
+  </head>
+  <body>
+    <!-- Écran d'accueil pour entrer le pseudo Last.fm -->
+    <div id="accueil">
+      <div class="accueil-content">
+        <h1>SONOSCOPE</h1>
+        <p>Entrez votre pseudo Last.fm pour commencer l'expérience</p>
+        <div class="accueil-input">
+          <input
+            type="text"
+            id="accueil-user-input"
+            placeholder="Ton pseudo..."
+          />
+          <button id="bouton-entrer">ENTRER</button>
+        </div>
+        <p class="accueil-instruction">
+          Assurez-vous qu'une musique joue sur votre Spotify
+        </p>
+      </div>
+    </div>
+
+    <!-- Canvas pour la scène 3D -->
+    <canvas id="scene3D"></canvas>
+
+    <!-- Panel de debug pour les visualisations audio -->
+    <button id="toggle-debug">Afficher Debug</button>
+    <div id="debug-panel" class="hidden">
+      <canvas id="audioDebug"></canvas>
+      <canvas id="audioCompareDebug"></canvas>
+    </div>
+
+    <!-- Contrôles en haut pour changer le pseudo Last.fm -->
+    <div id="controles">
+      <div class="controles-content">
+        <input type="text" id="controles-user-input" placeholder="Pseudo Last.fm..." />
+        <button id="controles-go-bouton">GO</button>
+      </div>
+    </div>
+
+    <!-- UI pour afficher les infos de la track en cours -->
+    <div id="player-ui" class="hidden">
+      <img id="album-cover" src="" alt="Pochette" />
+      <div class="track-info">
+        <h2 id="track-title">Titre</h2>
+        <p id="track-artist">Artiste</p>
+        <div id="color-palette"></div>
+      </div>
+    </div>
+
+    <!-- Importation du script principal de l'application -->
+  </body>
+</html>
