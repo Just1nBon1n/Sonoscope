@@ -43,10 +43,10 @@ const userFromUrl = urlParams.get("user");
 // Variable de pseudo dans la mémoire locale du navigateur
 const userFromMemory = localStorage.getItem("sonoscope_user");
 
-// On définit le pseudo prioritaire dès le début (URL > Mémoire > Valeur par défaut)
+// Définit le pseudo prioritaire dès le début (URL > Mémoire > Valeur par défaut)
 const pseudoAuDemarrage = userFromUrl || userFromMemory;
 
-// On initialise les composants UI
+// Initialise les composants UI
 initPaletteUI();
 setupDebugToggle();
 
@@ -107,8 +107,14 @@ btnStart.addEventListener("click", async () => {
         // Premier polling (Requête réseau + Traitement)
         polling();
         
-        // On lance la boucle de polling
-        setInterval(polling, 5000);
+        // Polling chauqe 5 secondes (avec pause si l'onglet est masqué pour économiser les ressources)
+        setInterval(() => {
+          if (document.hidden) {
+              console.log("Polling mis en pause (onglet masqué)");
+              return;
+          }
+          polling();
+        }, 5000);
     }, 400);
   }
 });
@@ -163,9 +169,8 @@ document.addEventListener("keydown", (event) => {
 });
 // =============================================================================
 
+let dernierIsrc = null; 
 // === Vérification toutes les 10 secondes (Polling) ===========================
-let dernierIsrc = null;
-
 async function polling() {
   // Récupération des métadonnées de la musique actuelle
   const musicData = await obtenirMetadonneesMusique();
@@ -200,26 +205,26 @@ async function gestionCouleurs(musicData) {
       img.crossOrigin = "Anonymous";
       img.src = musicData.pochetteUrl;
 
-      // Anti-freeze : décode l'image en arrière-plan
+      // Décode l'image en arrière-plan
       await img.decode();
 
       // 1. Premier appel UI : On utilise la palette existante pour éviter l'erreur
       // Si aucune palette n'existe encore, on passe un tableau vide []
       updateMusiqueUI(musicData, monde.paletteActuelle || []);
 
-      // 2. On décale les calculs lourds
+      // 2. Décalage des calculs lourds
       setTimeout(async () => {
-        // C'est ICI qu'on définit nouvellePalette
         let nouvellePalette = await extractionCouleurs(musicData.pochetteUrl);
         nouvellePalette = trierPaletteParLuminance(nouvellePalette);
 
-        // --- CALCULS (Stats, Bloom, Binômes...) ---
+        // Analyse de la palette pour calculer les statistiques de luminosité et de saturation
         const stats = analyserPalette(nouvellePalette);
         const ratioLum = stats.moyenneLum;
         monde.bloomThresholdCible = THREE.MathUtils.mapLinear(Math.pow(ratioLum, 1.5), 0, 1, 0.1, 0.95);
         const ratioSat = stats.moyenneSat;
         monde.bloomIntensityCible = THREE.MathUtils.mapLinear(ratioSat, 0, 1, 2, 0.8);
 
+        // Binômes pour les murs basés sur la palette de la musique
         const binomes = genererBinomesMur(nouvellePalette);
         monde.binomesMur = {
           grave: binomes[0],
@@ -232,7 +237,7 @@ async function gestionCouleurs(musicData) {
           monde.paletteActuelle = nouvellePalette.map((c) => c.clone());
         }
 
-        // 3. Deuxième appel UI : Maintenant que nouvellePalette existe, on met à jour les swatches
+        // 3. Mise à jour du UI avec les nouvelles couleurs extraites de la pochette
         updateMusiqueUI(musicData, nouvellePalette);
       }, 10);
     } catch (err) {
@@ -635,7 +640,6 @@ function animate() {
 
     // --- ANIM MUR EQ ---------------------------------------------------------
     const nbColonnes = monde.colonnesEQ.length;
-
     // Boucle des colonnes du mur EQ
     monde.colonnesEQ.forEach((colonne, i) => {
       let indexData = i < nbColonnes / 2 ? i * 2 : (nbColonnes - i - 1) * 2;
@@ -658,10 +662,10 @@ function animate() {
         const seuilCube = j / colonne.length;
         const estAllume = intensite > seuilCube;
         
-        // 1. Calcul du sommet de chaque colonne 
+        // Calcul du sommet de chaque colonne 
         const estSommet = colonne.valeurPeak >= seuilCube && colonne.valeurPeak < seuilCube + (1 / colonne.length);
         
-        // 3. Calcul de la luminosité cible du cube (1 si allumé, 0 si éteint)
+        // Calcul de la luminosité cible du cube (1 si allumé, 0 si éteint)
         const cibleLuminosite = estAllume ? 1 : 0;
         const vitesseLum = estAllume ? 0.5 : 0.2;
         cube.userData.iLum = THREE.MathUtils.lerp(
@@ -670,7 +674,7 @@ function animate() {
           Math.min(vitesseLum * adj, 1),
         );
 
-        // 4. Application de la luminosité et des couleurs
+        // Application de la luminosité et des couleurs
         const intensiteLum = cube.userData.iLum;
         const now = Date.now();
 
@@ -906,7 +910,7 @@ function animate() {
     });
   }
 
-  // --- RENDU FINAL ---
+  // Rendu final avec le composer pour les effets
   composer.render();
 }
 // =============================================================================

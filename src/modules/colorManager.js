@@ -18,7 +18,7 @@ export async function extractionCouleurs(imageUrl) {
         // Extraction de la palette de couleurs (12 couleurs, 15 pour accélérer le processus)
         const rgbPalette = colorThief.getPalette(img, 12, 15); 
 
-        // Conversion THREE.js (pas de changement)
+        // Conversion THREE.js 
         const paletteThree = rgbPalette.map((rgb) =>
           new THREE.Color().setRGB(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255),
         );
@@ -86,10 +86,10 @@ export function genererBinomesMur(palette) {
       const hslC = {};
       c.getHSL(hslC);
 
-      // CONDITION 1 : Il faut que ce soit plus lumineux que la base (+15% minimum)
+      // condition 1 : Il faut que ce soit plus lumineux que la base (+15% minimum)
       if (hslC.l > hslBase.l + 0.15) {
         
-        // CONDITION 2 : Calcul de la proximité de teinte (Hue)
+        // condition 2 : Calcul de la proximité de teinte (Hue)
         const diffHue = Math.abs(hslBase.h - hslC.h);
         const distanceHue = Math.min(diffHue, 1 - diffHue); 
         const scoreTeinte = 1 - distanceHue;

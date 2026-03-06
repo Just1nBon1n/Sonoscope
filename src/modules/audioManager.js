@@ -13,7 +13,7 @@ export async function initAudio() {
       await audioContext.resume();
     }
 
-    // 2. Demander l'accès au flux 
+    // 2.1 Demander l'accès au flux 
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: false,
@@ -21,7 +21,7 @@ export async function initAudio() {
         autoGainControl: false,
       },
     });
-    // 2.5 Créer la source du flux audio (le stream source)
+    // 2.2 Créer la source du flux audio (le stream source)
     const source = audioContext.createMediaStreamSource(stream);
 
     // 3. Créer un gainNode pour contrôler le volume global 
@@ -50,9 +50,23 @@ export async function initAudio() {
 // =============================================================================
 
 // === Convertir le tableau de fréquences en valeurs normalisées (0 à 1) pour chaque bande logarithmique ===
-// moyennes = Float32Array = tableau de nombre decimaux (plus performant que tableau classique)
-// nbBins = nombre de bandes (colonnes)
-// sampleRate = nombre de samples par seconde (ex: 44100 Hz)
+/**
+ * Analyse et transforme le spectre audio brut en données logarithmiques normalisées.
+ * Applique 4 traitements :
+ * 1. Exposant de dynamique pour nuancer les sons (compression)
+ * 2. Noise gate pour couper les sons faibles
+ * 3. Auto-gain intelligent pour compenser les différences de volume entre les morceaux
+ * 4. High-shelf pour booster les aigus et rendre le visuel plus dynamique
+ *
+ * @param {Uint8Array} dataArray - Le tableau de fréquences brut issu de l'Analyseur Web Audio.
+ * @param {number} nbBins - Le nombre de bandes de fréquences (colonnes) souhaitées en sortie.
+ * @param {number} sampleRate - La fréquence d'échantillonnage de la source audio (ex: 44100 Hz).
+ * @returns {Object} Un objet contenant deux Float32Array : 
+ * { processedData (données traitées), rawData (données brutes normalisées) }.
+ * * @example
+ * const spectres = obtenirDonneesLog(donneesFFT, 64, audioContext.sampleRate);
+ * console.log(spectres.processedData); // Valeurs prêtes pour l'animation 3D
+ */
 export function obtenirDonneesLog(dataArray, nbBins, sampleRate) {
   const processedData = new Float32Array(nbBins);
   const rawData = new Float32Array(nbBins);

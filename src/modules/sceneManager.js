@@ -15,6 +15,17 @@ import {
 } from "postprocessing";
 
 // === Fonction d'initialisation de la scène 3D ================================
+/**
+ * Initialise le moteur de rendu, la caméra, les lumières et les objets de base de la scène 3D.
+ * Configure les paramètres de performance du WebGLRenderer et l'ambiance visuelle (brouillard, source lumineuse).
+ *
+ * @param {HTMLCanvasElement} canvas3D - L'élément canvas DOM où la scène sera dessinée.
+ * @returns {Object} Un objet contenant les instances fondamentales de Three.js :
+ * { scene, camera, renderer, sourceLumineuse }.
+ * * @example
+ * const canvas = document.querySelector('#monCanvas');
+ * const { scene, camera, renderer } = initScene(canvas);
+ */
 export function initScene(canvas3D) {
   // Création de la scène
   const scene = new THREE.Scene();
