@@ -33,17 +33,6 @@ import * as THREE from "three";
 import ColorThief from "colorthief";
 import GUI from "lil-gui";
 import { Timer } from "three/src/core/Timer.js";
-
-// === Gestion resize de la fenêtre ============================================
-window.addEventListener("resize", () => {
-  // Mettre à jour la caméra
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-
-  // Mettre à jour le rendu
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-});
 // =============================================================================
 
 // === Gestion du démarrage ====================================================
@@ -77,6 +66,19 @@ if (pseudoAuDemarrage) {
   playerInput.value = pseudoAuDemarrage;
 }
 
+// === Écouteur d'évenements ===================================================
+// --- Gestion de resize de la fenêtre -----------------------------------------
+window.addEventListener("resize", () => {
+  // Mettre à jour la caméra
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  // Mettre à jour le rendu
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+});
+
+// -----------------------------------------------------------------------------
 // Événement de clic sur le bouton de démarrage (Agit comme le clic initial pour activer l'audio)
 btnStart.addEventListener("click", async () => {
   // On utilise le pseudo défini au démarrage
@@ -111,7 +113,24 @@ btnStart.addEventListener("click", async () => {
   }
 });
 
-// Bouton GO pour changer d'utilisateur Last.fm
+// --- Initialisation de l'audio dans navigateur (avec click) ------------------
+let audioElements = null;
+window.addEventListener(
+  "click",
+  async () => {
+    // Si l'audio n'est pas déjà lancé
+    if (!audioElements) {
+      audioElements = await initAudio();
+
+      if (audioElements) {
+        console.log("Flux audio activé !");
+      }
+    }
+  },
+  { once: true },
+);
+
+// --- Bouton GO pour changer d'utilisateur Last.fm ----------------------------
 document.getElementById("controles-go-bouton").addEventListener("click", () => {
   const nouveauPseudo = playerInput.value.trim();
   if (nouveauPseudo !== "") {
@@ -124,6 +143,23 @@ document.getElementById("controles-go-bouton").addEventListener("click", () => {
 
     polling();
   }
+});
+
+// --- Écouteur de touche pour cacher/afficher le UI (touche H) ----------------
+document.addEventListener("keydown", (event) => {
+    // Si l'utilisateur appuie sur 'H' et n'est pas en train de taper dans un input
+    if (event.key.toLowerCase() === "h" && event.target.tagName !== "INPUT") {
+        const elementsToHide = [
+            document.getElementById("controles"),
+            document.getElementById("player-ui"),
+            document.getElementById("toggle-debug"),
+            document.getElementById("debug-panel")
+        ];
+
+        elementsToHide.forEach(el => {
+            if (el) el.classList.toggle("ui-hidden");
+        });
+    }
 });
 // =============================================================================
 
@@ -160,72 +196,50 @@ async function polling() {
 async function gestionCouleurs(musicData) {
   if (musicData.pochetteUrl) {
     try {
-      // 1. Extraction et Tri
-      let nouvellePalette = await extractionCouleurs(musicData.pochetteUrl);
-      nouvellePalette = trierPaletteParLuminance(nouvellePalette);
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.src = musicData.pochetteUrl;
 
-      // 2. Calcul des stats sur la NOUVELLE palette
-      const stats = analyserPalette(nouvellePalette);
+      // Anti-freeze : décode l'image en arrière-plan
+      await img.decode();
 
-      // --- 3. Logique du rendu adaptatif sur le bloom ------------------------
-      // Seuil (Threshold) : filtrage de la lumière
-      const ratioLum = stats.moyenneLum;
-      monde.bloomThresholdCible = THREE.MathUtils.mapLinear(
-        Math.pow(ratioLum, 1.5),
-        0, 1, // Plage d'entrée (0 = album très sombre, 1 = album très lumineux)
-        0.1, // Sortie min (Album noir) : plus de lumière
-        0.95, // Sortie max (Album très lumineux) : moins de lumière
-      );
+      // 1. Premier appel UI : On utilise la palette existante pour éviter l'erreur
+      // Si aucune palette n'existe encore, on passe un tableau vide []
+      updateMusiqueUI(musicData, monde.paletteActuelle || []);
 
-      // Intensité : Force de la lumière
-      const ratioSat = stats.moyenneSat;
-      monde.bloomIntensityCible = THREE.MathUtils.mapLinear(
-        ratioSat,
-        0, 1, // Plage d'entrée (0 = album très désaturé, 1 = album très saturé)
-        2, // Sortie min (Album désaturé) : lumière plus forte
-        0.8, // Sortie max (Album saturé) : lumière moins forte
-      );
-      // -----------------------------------------------------------------------
+      // 2. On décale les calculs lourds
+      setTimeout(async () => {
+        // C'est ICI qu'on définit nouvellePalette
+        let nouvellePalette = await extractionCouleurs(musicData.pochetteUrl);
+        nouvellePalette = trierPaletteParLuminance(nouvellePalette);
 
-      // 4. Génération des binômes de couleurs pour les murs en fonction de la palette
-      const binomes = genererBinomesMur(nouvellePalette);
-      monde.binomesMur = {
-        grave: binomes[0],
-        mid:   binomes[1],
-        high:  binomes[2]
-      };
+        // --- CALCULS (Stats, Bloom, Binômes...) ---
+        const stats = analyserPalette(nouvellePalette);
+        const ratioLum = stats.moyenneLum;
+        monde.bloomThresholdCible = THREE.MathUtils.mapLinear(Math.pow(ratioLum, 1.5), 0, 1, 0.1, 0.95);
+        const ratioSat = stats.moyenneSat;
+        monde.bloomIntensityCible = THREE.MathUtils.mapLinear(ratioSat, 0, 1, 2, 0.8);
 
-      // 5. Mise à jour des références pour la transition 3D
-      monde.paletteCible = nouvellePalette;
-      if (!monde.paletteActuelle) {
-        monde.paletteActuelle = nouvellePalette.map((c) => c.clone());
-      }
+        const binomes = genererBinomesMur(nouvellePalette);
+        monde.binomesMur = {
+          grave: binomes[0],
+          mid:   binomes[1],
+          high:  binomes[2]
+        };
 
-      // 6. Interface
-      updateMusiqueUI(musicData, nouvellePalette);
+        monde.paletteCible = nouvellePalette;
+        if (!monde.paletteActuelle) {
+          monde.paletteActuelle = nouvellePalette.map((c) => c.clone());
+        }
+
+        // 3. Deuxième appel UI : Maintenant que nouvellePalette existe, on met à jour les swatches
+        updateMusiqueUI(musicData, nouvellePalette);
+      }, 10);
     } catch (err) {
       console.error("Erreur lors de l'extraction des couleurs :", err);
     }
   }
 }
-// =============================================================================
-
-// === Initialisation de l'audio dans navigateur (avec click) ==================
-let audioElements = null;
-window.addEventListener(
-  "click",
-  async () => {
-    // Si l'audio n'est pas déjà lancé
-    if (!audioElements) {
-      audioElements = await initAudio();
-
-      if (audioElements) {
-        console.log("Flux audio activé !");
-      }
-    }
-  },
-  { once: true },
-);
 // =============================================================================
 
 // === Initialisation de la scène 3D et des objets =============================

@@ -81,26 +81,39 @@ export function initPaletteUI() {
 // === Mise à jour de l'UI avec les infos de la musique et la palette ==========
 export function updateMusiqueUI(musicData, palette) {
     const uiContainer = document.getElementById("player-ui");
-    if (!uiContainer) return;
-    uiContainer.classList.remove("hidden");
     
-    document.getElementById("album-cover").src = musicData.pochetteUrl;
-    document.getElementById("track-title").textContent = musicData.titre;
-    document.getElementById("track-artist").textContent = musicData.artiste;
+    const titreChanson = document.getElementById("track-title");
+    if (titreChanson.textContent === musicData.titre) return;
 
-    // Mise à jour des swatches de la palette de couleurs
-    const swatches = document.querySelectorAll(".swatch");
-    if (palette && swatches.length > 0) {
-        palette.forEach((color, i) => {
-            // Convertit les couleurs de 0-1 à 0-255 (RGB)
-            if (swatches[i]) {
-                const r = Math.round(color.r * 255);
-                const g = Math.round(color.g * 255);
-                const b = Math.round(color.b * 255);
-                swatches[i].style.backgroundColor = `rgb(${r},${g},${b})`;
-            }
+    uiContainer.classList.remove("is-playing");
+
+    setTimeout(() => {
+        const pochetteImf = document.getElementById("album-cover");
+        const artisteChanson = document.getElementById("track-artist");
+
+        // On met tout à jour ici, y compris le titre, pour que le prochain polling soit correct
+        pochetteImf.src = musicData.pochetteUrl;
+        titreChanson.textContent = musicData.titre; 
+        artisteChanson.textContent = musicData.artiste;
+
+        const swatches = document.querySelectorAll(".swatch");
+        if (palette && swatches.length > 0) {
+            palette.forEach((color, i) => {
+                // Convertit les couleurs de 0-1 à 0-255 (RGB)
+                if (swatches[i]) {
+                    const r = Math.round(color.r * 255);
+                    const g = Math.round(color.g * 255);
+                    const b = Math.round(color.b * 255);
+                    swatches[i].style.backgroundColor = `rgb(${r},${g},${b})`;
+                }
+            });
+        }
+        
+        // 4. RÉAPPARITION
+        requestAnimationFrame(() => {
+            uiContainer.classList.add("is-playing");
         });
-    }
+    }, 400);
 }
 // =============================================================================
 
@@ -110,8 +123,8 @@ export function setupDebugToggle() {
     const panel = document.getElementById('debug-panel');
     if (btn && panel) {
         btn.addEventListener('click', () => {
-            panel.classList.toggle('hidden');
-            btn.textContent = panel.classList.contains('hidden') ? "Afficher Debug" : "Masquer Debug";
+            const isVisible = panel.classList.toggle('active');
+            btn.textContent = isVisible ? "Masquer Debug" : "Afficher Debug";
         });
     }
 }

@@ -89,7 +89,8 @@ export function initScene(canvas3D) {
 export function initPostProcessing(renderer, scene, camera, sourceLumineuse) {
   // 1. Création du composer pour le post-processing
   const composer = new EffectComposer(renderer, {
-    frameBufferType: THREE.HalfFloatType 
+    frameBufferType: THREE.FloatType,
+    multisampling: 8
   });
 
   // 2. Configuration du rendu de base
@@ -120,7 +121,12 @@ export function initPostProcessing(renderer, scene, camera, sourceLumineuse) {
   });
 
   // 6. Ajout des passes dans le composer (ordre important)
-  const effectPass = new EffectPass(camera, smaaEffect, godRaysEffect, bloomEffect);
+  const effectPass = new EffectPass(
+    camera,
+    godRaysEffect,
+    bloomEffect,
+    smaaEffect
+  );
   composer.addPass(effectPass);
 
   return { composer, bloomEffect, godRaysEffect };

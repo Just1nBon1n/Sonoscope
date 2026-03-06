@@ -36,14 +36,14 @@ body, html {
 
 /* Calque 1 : Lignes verticales, rotation horaire lente */
 #accueil::before {
-    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.1) 2px, transparent 1px);
     background-size: 40px 100%;
     animation: rotateClockwise 120s linear infinite;
 }
 
 /* Calque 2 : Lignes horizontales, rotation anti-horaire plus rapide */
 #accueil::after {
-    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 2px, transparent 1px);
+    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 3px, transparent 1px);
     background-size: 100% 40px;
     animation: rotateCounterClockwise 90s linear infinite;
 }
@@ -130,13 +130,9 @@ body, html {
 #accueil-user-input:-webkit-autofill,
 #accueil-user-input:-webkit-autofill:hover, 
 #accueil-user-input:-webkit-autofill:focus {
-    /* On remplace le fond par une ombre interne (inset) de la couleur de ton choix */
     -webkit-box-shadow: 0 0 0px 1000px rgba(15, 15, 15, 1) inset;
-    /* On force la couleur du texte en blanc */
     -webkit-text-fill-color: white !important;
-    /* On garde la bordure propre */
     border: 1px solid rgba(255, 255, 255, 0.2);
-    /* On applique une transition pour éviter le flash de couleur au chargement */
     transition: background-color 5000s ease-in-out 0s;
 }
 
@@ -215,10 +211,19 @@ body, html {
     border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
     z-index: 100;
+    opacity: 0;                
+    visibility: hidden;        
+    transform: translateY(10px); 
+    transition: 
+        opacity 0.6s ease, 
+        transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), 
+        visibility 0.6s;
 }
 
-#debug-panel.hidden {
-    display: none;
+#debug-panel.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
 }
 
 #audioDebug, #audioCompareDebug {
@@ -271,6 +276,15 @@ body, html {
     transition: border-color 0.2s;
 }
 
+#controles-user-input:-webkit-autofill,
+#controles-user-input:-webkit-autofill:hover, 
+#controles-user-input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0px 1000px rgba(15, 15, 15, 1) inset;
+    -webkit-text-fill-color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transition: background-color 5000s ease-in-out 0s;
+}
+
 #controles-user-input:focus {
     border-color: rgba(255, 255, 255, 0.4);
 }
@@ -309,12 +323,30 @@ body, html {
     border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
     z-index: 100;
+
+    transition: background-color 1s ease, transform 0.5s ease;
 }
 
-#player-ui.hidden {
+#album-cover, 
+#track-title, 
+#track-artist, 
+#color-palette {
     opacity: 0;
     transform: translateY(20px);
-    pointer-events: none;
+    transition: opacity 1s ease, transform 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+#album-cover[src=""] {
+    visibility: hidden;
+}
+
+#player-ui.is-playing #album-cover,
+#player-ui.is-playing #track-title,
+#player-ui.is-playing #track-artist,
+#player-ui.is-playing #color-palette {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
 }
 
 #album-cover {
@@ -364,4 +396,21 @@ body, html {
     background-color: #222;
     border: 1px solid rgba(255, 255, 255, 0.1);
     transition: background-color 0.8s ease; 
+}
+
+/* === CACHER LE UI ========================================================= */
+#controles, #player-ui, #toggle-debug, #debug-panel {
+    transition: opacity 0.8s ease, transform 0.8s ease, visibility 0.8s;
+}
+
+/* La classe qui cache tout d'un coup */
+.ui-hidden {
+    opacity: 0 !important;
+    visibility: hidden;
+    transform: translateY(-10px); /* Petit mouvement vers le haut pour les contrôles */
+}
+
+/* Le player UI descend un peu au lieu de monter */
+#player-ui.ui-hidden {
+    transform: translateY(10px);
 }
