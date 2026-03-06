@@ -83,24 +83,31 @@ btnStart.addEventListener("click", async () => {
   // trim pour éviter les espaces vides
   const user = initialInput.value.trim();
   if (user) {
+    // 1. Animation de la page d'accueil
+    pageAcceuil.classList.add("fade-out");
+
+    // 2. Update des infos utilisateur 
     // Mettre à jour le pseudo dans le input
     if (playerInput) playerInput.value = user;
-
     // Ajout du pseudo dans la mémoire locale
     localStorage.setItem("sonoscope_user", user);
-
     // Mise à jour de l'URL
     const newUrl = `${window.location.origin}${window.location.pathname}?user=${user}`;
     window.history.pushState({ path: newUrl }, "", newUrl);
-
     // Mise a jour de l'utilisateur dans metaDataManager
     setLastFmUser(user);
-    pageAcceuil.classList.add("fade-out");
-
-    // initialisation de l'audio et lancement du polling
-    audioElements = await initAudio();
-    polling();
-    setInterval(polling, 5000);
+    
+    // 3. initialisation de l'audio et lancement du polling avec délai pour laisser le temps à l'animation de se faire
+    setTimeout(async () => {
+        // initialisation de l'audio (Lourd)
+        audioElements = await initAudio();
+        
+        // Premier polling (Requête réseau + Traitement)
+        polling();
+        
+        // On lance la boucle de polling
+        setInterval(polling, 5000);
+    }, 400);
   }
 });
 

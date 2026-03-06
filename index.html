@@ -10,24 +10,37 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=graphic_eq" />
 
     <link rel="stylesheet" href="src/style.css" />
   </head>
   <body>
     <!-- Écran d'accueil pour entrer le pseudo Last.fm -->
-    <div id="accueil">
+    <div id="accueil"> 
       <div class="accueil-content">
-        <h1>SONOSCOPE</h1>
-        <p>Entrez votre pseudo Last.fm pour commencer l'expérience</p>
+        <h1 class="titre">
+          <span class="char">S</span>
+          <span class="char">O</span>
+          <span class="char">N</span>
+          <span class="char">O</span>
+          <span class="char">S</span>
+          <span class="char">C</span>
+          <span class="char">O</span>
+          <span class="char">P</span>
+          <span class="char">E</span>
+        </h1>
+        <p class="accueil-instruction">Entrez votre pseudo Last.fm pour commencer l'expérience</p>
         <div class="accueil-input">
           <input
             type="text"
             id="accueil-user-input"
             placeholder="Ton pseudo..."
           />
-          <button id="bouton-entrer">ENTRER</button>
+          <button id="bouton-entrer">
+            <span class="material-symbols-outlined">graphic_eq</span>
+          </button>
         </div>
-        <p class="accueil-instruction">
+        <p class="accueil-tip">
           Assurez-vous qu'une musique joue sur votre Spotify
         </p>
       </div>
