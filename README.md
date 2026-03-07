@@ -1,5 +1,9 @@
 # Sonoscope
 
+### Présentation du projet :
+## --> https://just1nbon1n.github.io/Presentation-Sonoscope/ <--
+
+### Vivez l'exprérience :
 ### --> https://just1nbon1n.github.io/Sonoscope/ <--
 
 **Sonoscope** est un visualisateur audio 3D immersif développé avec **Three.js**. Il synchronise en temps réel un univers visuel génératif avec votre écoute musicale grâce à l'intégration de plusieurs APIs.
