@@ -1,9 +1,12 @@
 // metadataManager.js
 // Ce module gère la récupération des métadonnées de la musique qui joue actuellement
 // Lasf.fm -> Deezer (ISRC) -> Reccobeats (BPM, énergie, etc.)
-// Variable pour stockage des dernières données 
+
+// Variable pour stockage des dernières données (cache)
 let dernierTitreArtiste = null;
 let dernierIsrc = null;
+let dernierePochette = null;
+let derniersAudioFeatures = null;
 // === Fonction principale de fetching =========================================
 /**
  * Obtiens les métadonnées de la musique actuellement jouée en combinant les données de Last.fm, Deezer et Reccobeats.
@@ -25,18 +28,36 @@ export async function obtenirMetadonneesMusique() {
   // Évite les doubles appels à Deezer et Reccobeats si la musique n'a pas changé
   // Très pratique pour les problèmes de CORS de Deezer
   if (musiqueActuelle === dernierTitreArtiste) {
-    return { isrc: dernierIsrc }; 
+    // Si la musique était introuvable sur Deezer, on retourne null directement sans requêter
+    if (!dernierIsrc) return null;
+
+    return { 
+      titre: trackInfo.titre,
+      artiste: trackInfo.artiste,
+      isrc: dernierIsrc,
+      pochetteUrl: dernierePochette,
+      reccobeats: derniersAudioFeatures
+    }; 
   }
+
+  // Mémorisation avant deezer pour éviter les doubles appels et les problèmes de CORS
+  dernierTitreArtiste = musiqueActuelle;
 
   // 2. Deezer
   const deezerData = await obtenirISRCDeDeezer(trackInfo.titre, trackInfo.artiste, trackInfo.album);
-  if (!deezerData) return null;
+  if (!deezerData) {
+    dernierIsrc = null;
+    dernierePochette = null;
+    derniersAudioFeatures = null;
+    return null;
+  }
 
-  dernierTitreArtiste = musiqueActuelle;
   dernierIsrc = deezerData.isrc;
+  dernierePochette = deezerData.pochette;
 
   // 3. Reccobeats
   const audioFeatures = await obtenirReccobeatsData(deezerData.isrc);
+  derniersAudioFeatures = audioFeatures;
   
   // Renvoie des métadonnées complètes pour la musique actuelle
   return {
@@ -127,11 +148,13 @@ async function obtenirISRCDeDeezer(titre, artiste, album, tentative = 1) {
     query = `${titre} ${artiste}`;
   }
 
+  const CORSPROXY_API_KEY = "94fc37d8";
   const url = `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=1`;
+  const proxyUrl = `https://corsproxy.io/?key=${CORSPROXY_API_KEY}&url=${encodeURIComponent(url)}`;
 
   try {
     // Envoie de la requête au proxy qui la redirige vers Deezer
-    const reponse = await fetch(proxy + encodeURIComponent(url));
+    const reponse = await fetch(proxyUrl);
     const reponseDeezer = await reponse.json();
 
     // Si on trouve un résultat, retourne l'ISRC
@@ -142,7 +165,7 @@ async function obtenirISRCDeDeezer(titre, artiste, album, tentative = 1) {
         isrc: isrc,
         // Si jamais XL n'existe pas prend big
         pochette: reponseDeezer.data[0].album.cover_xl || reponseDeezer.data[0].album.cover_big
-      }
+      };
     } 
 
     // Si aucune correspondance n'est trouvée, tentative++
