@@ -113,7 +113,8 @@ async function obtenirISRCDeDeezer(titre, artiste, album, tentative = 1) {
   const artisteNettoyé = artiste.split(' (')[0].trim();
 
   let query;
-  const proxy = "https://corsproxy.io/?";
+  // proxy worker de Cloudflare
+  const proxy = "https://sonoscope-proxy.justinbonin7.workers.dev/?url=";
 
   if (tentative === 1) {
     // Tentative 1: recherche stricte avec guillemets pour forcer la correspondance exacte

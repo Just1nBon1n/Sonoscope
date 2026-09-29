@@ -1,0 +1,7 @@
+--------------------------------------------------------------------------------
+========== NOTEPAD SONOSCOPE ===================================================
+--------------------------------------------------------------------------------
+
+- Réorganisation audio système (Voicemeeter au lieu de VBcable) --- !!!
+- Réorganisation des dossiers et fichiers dans VS --- !
+- Revoir code pour plusieurs scènes 3D --- !
