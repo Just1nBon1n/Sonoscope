@@ -3,5 +3,6 @@
 --------------------------------------------------------------------------------
 
 - Réorganisation audio système (Voicemeeter au lieu de VBcable) --- !!!
+- Mettre les fichier important dans un .env pour visibilité Github --- !!
 - Réorganisation des dossiers et fichiers dans VS --- !
 - Revoir code pour plusieurs scènes 3D --- !
