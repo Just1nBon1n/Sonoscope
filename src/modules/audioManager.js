@@ -1,10 +1,56 @@
 // audioManager.js
 
 // === Fonction d'initialisation de l'audio ====================================
+// export async function initAudio() {
+//   // try/catch au lieu de if/else pour gérer les erreurs sans bloquer le code
+//   try {
+//     // 1. Créer le contexte (le moteur audio)
+//     const audioContext = new (
+//       window.AudioContext || window.webkitAudioContext
+//     )();
+
+//     if (audioContext.state === "suspended") {
+//       await audioContext.resume();
+//     }
+
+//     // 2.1 Demander l'accès au flux 
+//     const stream = await navigator.mediaDevices.getUserMedia({
+//       audio: {
+//         echoCancellation: false,
+//         noiseSuppression: false,
+//         autoGainControl: false,
+//       },
+//     });
+//     // 2.2 Créer la source du flux audio (le stream source)
+//     const source = audioContext.createMediaStreamSource(stream);
+
+//     // 3. Créer un gainNode pour contrôler le volume global 
+//     const gainNode = audioContext.createGain();
+//     gainNode.gain.value = 1.0;
+
+//     // 4. Créer l'analyseur 
+//     const analyser = audioContext.createAnalyser();
+//     analyser.fftSize = 2048; // Divise le son en bandes de fréquences (oblige detre une puissance de 2)
+
+//     // Connecter la source à l'analyseur
+//     source.connect(gainNode);
+//     gainNode.connect(analyser);
+
+//     // 4. Créer le tableau de données (les chiffres de 0 à 255)
+//     // Uint8Array = tableau d'entiers non signés sur 8 bits (donc pas de latence)
+//     const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+//     return { audioContext, analyser, dataArray, gainNode };
+//   } catch (err) {
+//     // Message derreur si l'utilisateur refuse l'accès au flux audio
+//     console.error("L'accès au flux audio a été refusé :", err);
+//     return null;
+//   }
+// }
+
 export async function initAudio() {
-  // try/catch au lieu de if/else pour gérer les erreurs sans bloquer le code
   try {
-    // 1. Créer le contexte (le moteur audio)
+    // 1. Créer le contexte audio
     const audioContext = new (
       window.AudioContext || window.webkitAudioContext
     )();
@@ -13,40 +59,58 @@ export async function initAudio() {
       await audioContext.resume();
     }
 
-    // 2.1 Demander l'accès au flux 
-    const stream = await navigator.mediaDevices.getUserMedia({
+    // 2. Demander la capture système (WASAPI sous Windows / CoreAudio sous macOS)
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: {
+        displaySurface: "monitor", // Optimisé pour tout l'écran
+      },
       audio: {
+        suppressLocalAudioPlayback: false, // CRITIQUE : Ne coupe pas tes haut-parleurs
         echoCancellation: false,
         noiseSuppression: false,
         autoGainControl: false,
       },
     });
-    // 2.2 Créer la source du flux audio (le stream source)
+
+    // 2.1 Vérification de la piste audio
+    const audioTrack = stream.getAudioTracks()[0];
+    if (!audioTrack) {
+      // Si l'utilisateur a oublié de cocher la case d'audio système
+      stream.getTracks().forEach((track) => track.stop());
+      throw new Error(
+        "Aucune piste audio détectée. Assure-toi de cocher 'Partager l'audio du système' !"
+      );
+    }
+
+    // 2.2 Couper immédiatement la piste vidéo (inutile pour le visualiseur)
+    stream.getVideoTracks().forEach((track) => track.stop());
+
+    // 3. Connecter le flux à l'AudioContext
     const source = audioContext.createMediaStreamSource(stream);
 
-    // 3. Créer un gainNode pour contrôler le volume global 
+    // 4. Gain global (utile pour compenser le volume Windows post-fader)
     const gainNode = audioContext.createGain();
     gainNode.gain.value = 1.0;
 
-    // 4. Créer l'analyseur 
+    // 5. Analyseur FFT
     const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 2048; // Divise le son en bandes de fréquences (oblige detre une puissance de 2)
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.8; // Lisse légèrement les transitions inter-frames
 
-    // Connecter la source à l'analyseur
+    // 6. Chaînage : source -> gain -> analyser
+    // (On ne connecte PAS à destination pour éviter un double son/écho)
     source.connect(gainNode);
     gainNode.connect(analyser);
 
-    // 4. Créer le tableau de données (les chiffres de 0 à 255)
-    // Uint8Array = tableau d'entiers non signés sur 8 bits (donc pas de latence)
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-    return { audioContext, analyser, dataArray, gainNode };
+    return { audioContext, analyser, dataArray, gainNode, stream };
   } catch (err) {
-    // Message derreur si l'utilisateur refuse l'accès au flux audio
-    console.error("L'accès au flux audio a été refusé :", err);
+    console.error("Erreur lors de l'initialisation de la capture audio :", err);
     return null;
   }
 }
+
 // =============================================================================
 
 // === Convertir le tableau de fréquences en valeurs normalisées (0 à 1) pour chaque bande logarithmique ===
