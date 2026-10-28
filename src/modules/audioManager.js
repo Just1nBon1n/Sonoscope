@@ -1,6 +1,7 @@
 // audioManager.js
 
 // === Fonction d'initialisation de l'audio ====================================
+// === Méthode inutile limitant la capture à l'audio du micro (pas de capture système) ===
 // export async function initAudio() {
 //   // try/catch au lieu de if/else pour gérer les erreurs sans bloquer le code
 //   try {
@@ -36,7 +37,7 @@
 //     source.connect(gainNode);
 //     gainNode.connect(analyser);
 
-//     // 4. Créer le tableau de données (les chiffres de 0 à 255)
+//     // 5. Créer le tableau de données (les chiffres de 0 à 255)
 //     // Uint8Array = tableau d'entiers non signés sur 8 bits (donc pas de latence)
 //     const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
@@ -48,7 +49,9 @@
 //   }
 // }
 
+// === Fonction d'initialisation de l'audio ====================================
 export async function initAudio() {
+  // try/catch au lieu de if/else pour gérer les erreurs sans bloquer le code
   try {
     // 1. Créer le contexte audio
     const audioContext = new (
@@ -60,13 +63,15 @@ export async function initAudio() {
     }
 
     // 2. Demander la capture système (WASAPI sous Windows / CoreAudio sous macOS)
+    // En gros, on demande un partage decran avec audio système au lieu d'écouter le micro. 
+    // permet de récupérer le son de n'importe quelle application et evite le setup du loopback.
     const stream = await navigator.mediaDevices.getDisplayMedia({
       video: {
         displaySurface: "monitor", // Optimisé pour tout l'écran
       },
       audio: {
-        suppressLocalAudioPlayback: false, // CRITIQUE : Ne coupe pas tes haut-parleurs
-        echoCancellation: false,
+        suppressLocalAudioPlayback: false, // CRITIQUE : Garde le output audio
+        echoCancellation: false, 
         noiseSuppression: false,
         autoGainControl: false,
       },
@@ -88,24 +93,21 @@ export async function initAudio() {
     // 3. Connecter le flux à l'AudioContext
     const source = audioContext.createMediaStreamSource(stream);
 
-    // 4. Gain global (utile pour compenser le volume Windows post-fader)
-    const gainNode = audioContext.createGain();
-    gainNode.gain.value = 1.0;
-
-    // 5. Analyseur FFT
+    // 4. Analyseur FFT
     const analyser = audioContext.createAnalyser();
     analyser.fftSize = 2048;
-    analyser.smoothingTimeConstant = 0.8; // Lisse légèrement les transitions inter-frames
+    analyser.smoothingTimeConstant = 0.0;
+    
+    // 4.1 connecter le flux à l'analyseur
+    source.connect(analyser);
 
-    // 6. Chaînage : source -> gain -> analyser
-    // (On ne connecte PAS à destination pour éviter un double son/écho)
-    source.connect(gainNode);
-    gainNode.connect(analyser);
-
+    // 5. Créer le tableau de données (les chiffres de 0 à 255)
+    // Uint8Array = tableau d'entiers non signés sur 8 bits (donc pas de latence)
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-    return { audioContext, analyser, dataArray, gainNode, stream };
+    return { audioContext, analyser, dataArray, stream };
   } catch (err) {
+    // Message derreur si l'utilisateur refuse l'accès au flux audio ou si une erreur survient
     console.error("Erreur lors de l'initialisation de la capture audio :", err);
     return null;
   }

@@ -3,14 +3,17 @@
 // Ce fichier initialise la scène 3D, gère l'audio et lance l'animation
 // === Fichier principal de l'application ======================================
 // Importation des fonctions des modules
-import { initAudio, obtenirDonneesLog } from "./modules/audioManager.js";
+import { 
+  initAudio,
+  obtenirDonneesLog 
+} from "./modules/audioManager.js";
 import {
   extractionCouleurs,
   trierPaletteParLuminance,
   analyserPalette,
   genererBinomesMur
 } from "./modules/colorManager.js";
-import { initGUI } from "./modules/guiManager.js";
+// import { initGUI } from "./modules/guiManager.js";
 import {
   obtenirMetadonneesMusique,
   setLastFmUser,
